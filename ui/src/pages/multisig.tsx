@@ -1,18 +1,26 @@
 import React, { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import Image from 'next/image';
 import styles from '../styles/MultiSig.module.css';
+
+const predefinedAddresses = [
+  'B62qnXy1f75qq8c6HS2Am88Gk6UyvTHK3iSYh4Hb3nD6DS2eS6wZ4or',
+  'B62qjsV6WQwTeEWrNrRRBP6VaaLvQhwWTnFi4WP4LQjGvpfZEumXzxb',
+  'B62qodtMG7Dwo7f6zWdzxWkG8ULtKZBFjbq9H6RTqMm4KhJVh1VPwrN',
+  'B62qrYzMtqbdW3oRv6aX9G24L2ZqN6VnbDY8mJi8x3EWDbZw2bK6kDK',
+  'B62qkRoGi7bbDJzFHpoSzQRqYSkjqUYiR8yM9c6aZpzKmke6zXxcS69',
+];
 
 const MultiSig: React.FC = () => {
   const [signers, setSigners] = useState<string[]>([]);
   const [threshold, setThreshold] = useState<number>(2);
   const [newSigner, setNewSigner] = useState<string>('');
+  const [isSuccess, setIsSuccess] = useState<boolean>(false);
+  const [walletName, setWalletName] = useState<string>('');
 
-  const addSigner = () => {
-    if (newSigner && !signers.includes(newSigner)) {
-      setSigners([...signers, newSigner]);
-      setNewSigner('');
+  const addSigner = (address: string) => {
+    if (!signers.includes(address)) {
+      setSigners([...signers, address]);
     }
   };
 
@@ -20,11 +28,43 @@ const MultiSig: React.FC = () => {
     setSigners(signers.filter((_, i) => i !== index));
   };
 
+  const createMultiSig = () => {
+    if (signers.length >= threshold && walletName) {
+      // Here you would typically interact with the Mina blockchain
+      // For now, we'll just simulate success
+      setIsSuccess(true);
+    }
+  };
+
+  if (isSuccess) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.background}>
+          <div className={styles.backgroundGradients}></div>
+        </div>
+        <main className={styles.main}>
+          <h1 className={styles.title}>MultiSig Created!</h1>
+          <div className={styles.card}>
+            <h2>{walletName}</h2>
+            <p>Your MultiSig wallet has been successfully created with the following details:</p>
+            <ul className={styles.summaryList}>
+              <li>Number of Signers: {signers.length}</li>
+              <li>Threshold: {threshold}</li>
+            </ul>
+            <Link href="/" className={styles.backButton}>
+              Back to Home
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.container}>
       <Head>
-        <title>MultiSig Wallet - MINA</title>
-        <meta name="description" content="MultiSig wallet functionality for MINA" />
+        <title>Create MultiSig Wallet - MINA</title>
+        <meta name="description" content="Create a MultiSig wallet on MINA" />
       </Head>
 
       <div className={styles.background}>
@@ -32,15 +72,27 @@ const MultiSig: React.FC = () => {
       </div>
 
       <main className={styles.main}>
-        <h1 className={styles.title}>MultiSig Wallet</h1>
+        <h1 className={styles.title}>Create MultiSig Wallet</h1>
         <p className={styles.tagline}>Secure your assets with multiple signatures</p>
 
         <div className={styles.card}>
+          <div className={styles.inputGroup}>
+            <label htmlFor="walletName">Wallet Name:</label>
+            <input
+              type="text"
+              id="walletName"
+              value={walletName}
+              onChange={(e) => setWalletName(e.target.value)}
+              className={styles.input}
+              placeholder="Enter wallet name"
+            />
+          </div>
+
           <h2>Signers</h2>
           <ul className={styles.signerList}>
             {signers.map((signer, index) => (
               <li key={index}>
-                {signer}
+                {signer.slice(0, 10)}...{signer.slice(-10)}
                 <button onClick={() => removeSigner(index)} className={styles.removeButton}>
                   Remove
                 </button>
@@ -48,15 +100,29 @@ const MultiSig: React.FC = () => {
             ))}
           </ul>
 
+          <div className={styles.predefinedAddresses}>
+            <h3>Quick Add:</h3>
+            {predefinedAddresses.map((address, index) => (
+              <button
+                key={index}
+                onClick={() => addSigner(address)}
+                className={styles.addressButton}
+                disabled={signers.includes(address)}
+              >
+                Address {index + 1}
+              </button>
+            ))}
+          </div>
+
           <div className={styles.addSigner}>
             <input
               type="text"
               value={newSigner}
               onChange={(e) => setNewSigner(e.target.value)}
-              placeholder="Enter signer address"
+              placeholder="Enter custom signer address"
               className={styles.input}
             />
-            <button onClick={addSigner} className={styles.addButton}>
+            <button onClick={() => addSigner(newSigner)} className={styles.addButton}>
               Add Signer
             </button>
           </div>
@@ -67,7 +133,7 @@ const MultiSig: React.FC = () => {
               type="number"
               id="threshold"
               value={threshold}
-              onChange={(e) => setThreshold(Math.max(1, parseInt(e.target.value)))}
+              onChange={(e) => setThreshold(Math.max(1, Math.min(signers.length, parseInt(e.target.value))))}
               min="1"
               max={signers.length}
               className={styles.input}
@@ -78,6 +144,10 @@ const MultiSig: React.FC = () => {
             <p>Total Signers: <span className={styles.code}>{signers.length}</span></p>
             <p>Required Signatures: <span className={styles.code}>{threshold}</span></p>
           </div>
+
+          <button onClick={createMultiSig} className={styles.createButton} disabled={signers.length < threshold || !walletName}>
+            Create MultiSig Wallet
+          </button>
         </div>
 
         <Link href="/" className={styles.backButton}>

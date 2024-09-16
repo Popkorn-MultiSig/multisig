@@ -51,9 +51,10 @@
   
   .title {
     font-family: var(--font-monument-bold);
-    font-size: 4rem;
+    font-size: 3rem;
     margin-bottom: 1rem;
     color: #2d2d2d;
+    text-align: center;
   }
   
   .tagline {
@@ -62,15 +63,16 @@
     letter-spacing: 0.082rem;
     margin-bottom: 2rem;
     color: #2d2d2d;
+    text-align: center;
   }
   
   .card {
-    background-color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(255, 255, 255, 0.9);
     border: 1px solid #2d2d2d;
     border-radius: 4px 1px;
     padding: 2rem;
     width: 100%;
-    max-width: 500px;
+    max-width: 600px;
     box-shadow: 4px 4px 0 #2d2d2d;
   }
   
@@ -79,6 +81,24 @@
     font-size: 1.5rem;
     margin-bottom: 1rem;
     letter-spacing: 0.13rem;
+  }
+  
+  .inputGroup {
+    margin-bottom: 1rem;
+  }
+  
+  .inputGroup label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-family: var(--font-monument);
+  }
+  
+  .input {
+    width: 100%;
+    padding: 0.5rem;
+    font-family: var(--font-monument);
+    border: 1px solid #2d2d2d;
+    border-radius: 2px;
   }
   
   .signerList {
@@ -93,6 +113,9 @@
     align-items: center;
     margin-bottom: 0.5rem;
     font-family: var(--font-monument);
+    background-color: #f0f0f0;
+    padding: 0.5rem;
+    border-radius: 2px;
   }
   
   .removeButton {
@@ -105,21 +128,42 @@
     border-radius: 2px;
   }
   
+  .predefinedAddresses {
+    margin-bottom: 1rem;
+  }
+  
+  .predefinedAddresses h3 {
+    font-family: var(--font-monument);
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .addressButton {
+    background-color: #e6f7ff;
+    border: 1px solid #91d5ff;
+    color: #1890ff;
+    padding: 0.25rem 0.5rem;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    font-family: var(--font-monument);
+    border-radius: 2px;
+  }
+  
+  .addressButton:disabled {
+    background-color: #f5f5f5;
+    border-color: #d9d9d9;
+    color: #bfbfbf;
+    cursor: not-allowed;
+  }
+  
   .addSigner {
     display: flex;
     gap: 0.5rem;
     margin-bottom: 1rem;
   }
   
-  .input {
-    padding: 0.5rem;
-    font-family: var(--font-monument);
-    border: 1px solid #2d2d2d;
-    border-radius: 2px;
-    flex-grow: 1;
-  }
-  
-  .addButton, .backButton {
+  .addButton, .backButton, .createButton {
     background-color: #2d2d2d;
     color: white;
     border: none;
@@ -130,8 +174,13 @@
     transition: background-color 0.3s ease;
   }
   
-  .addButton:hover, .backButton:hover {
+  .addButton:hover, .backButton:hover, .createButton:hover {
     background-color: #4a4a4a;
+  }
+  
+  .addButton:disabled, .createButton:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
   }
   
   .threshold {
@@ -147,6 +196,9 @@
   .summary {
     font-family: var(--font-monument-light);
     margin-top: 1rem;
+    background-color: #f0f0f0;
+    padding: 1rem;
+    border-radius: 2px;
   }
   
   .code {
@@ -157,13 +209,34 @@
     margin-top: 2rem;
   }
   
+  .createButton {
+    width: 100%;
+    margin-top: 1rem;
+    background-color: #1890ff;
+  }
+  
+  .createButton:hover {
+    background-color: #40a9ff;
+  }
+  
+  .summaryList {
+    list-style-type: none;
+    padding: 0;
+    margin-bottom: 1rem;
+  }
+  
+  .summaryList li {
+    font-family: var(--font-monument);
+    margin-bottom: 0.5rem;
+  }
+  
   @media (max-width: 700px) {
     .main {
       padding: 2rem;
     }
   
     .title {
-      font-size: 3rem;
+      font-size: 2.5rem;
     }
   
     .card {
