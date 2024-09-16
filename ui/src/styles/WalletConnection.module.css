@@ -6,21 +6,25 @@
   }
   
   .connectButton, .addressButton {
-    background-color: #1890ff;
+    background-color: #2d2d2d;
     color: white;
     border: none;
     padding: 10px 20px;
-    border-radius: 5px;
+    border-radius: 4px 1px;
     cursor: pointer;
     font-family: var(--font-monument);
-    transition: background-color 0.3s;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
   }
   
   .connectButton:hover, .addressButton:hover {
-    background-color: #40a9ff;
+    background-color: #4a4a4a;
+    transform: translateY(-2px);
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.1);
   }
   
-  .modal {
+  .modalOverlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -30,46 +34,69 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    z-index: 1001;
+  }
+  
+  .modal {
+    background-color: white;
+    border-radius: 8px 1px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 90%;
+    max-width: 400px;
   }
   
   .modalContent {
-    background-color: white;
     padding: 20px;
-    border-radius: 5px;
-    width: 300px;
   }
   
   .modalContent h3 {
     font-family: var(--font-monument-bold);
-    margin-bottom: 10px;
+    margin-bottom: 15px;
+    font-size: 20px;
+    color: #2d2d2d;
   }
   
   .modalContent p {
     font-family: var(--font-monument);
     margin-bottom: 10px;
+    font-size: 14px;
+    color: #4a4a4a;
   }
   
-  .disconnectButton, .closeButton {
-    background-color: #ff4d4f;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-family: var(--font-monument);
-    margin-right: 10px;
-    transition: background-color 0.3s;
-  }
-  
-  .disconnectButton:hover, .closeButton:hover {
-    background-color: #ff7875;
+  .modalContent strong {
+    font-family: var(--font-monument-bold);
+    color: #2d2d2d;
   }
   
   .closeButton {
-    background-color: #d9d9d9;
-    color: #000;
+    background-color: #f0f0f0;
+    color: #2d2d2d;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px 1px;
+    cursor: pointer;
+    font-family: var(--font-monument);
+    font-size: 14px;
+    transition: all 0.3s ease;
+    margin-top: 15px;
   }
   
   .closeButton:hover {
-    background-color: #bfbfbf;
+    background-color: #e0e0e0;
+  }
+  
+  @media (max-width: 768px) {
+    .walletConnection {
+      top: 10px;
+      right: 10px;
+    }
+  
+    .connectButton, .addressButton {
+      padding: 8px 16px;
+      font-size: 12px;
+    }
+  
+    .modal {
+      width: 95%;
+    }
   }

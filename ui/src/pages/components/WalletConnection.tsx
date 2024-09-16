@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useMinaWallet } from '@/hooks/useMinaWallet';
 import styles from '@/styles/WalletConnection.module.css';
+import { DefaultSupportNetorkIDs } from '@/constants/config';
 
 const WalletConnection: React.FC = () => {
-  const { account, isConnected, network, connectWallet, checkConnection } = useMinaWallet();
+  const { account, isConnected, network, balance, setBalance, connectWallet, checkConnection } = useMinaWallet();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [balance, setBalance] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     checkConnection();
@@ -17,15 +18,20 @@ const WalletConnection: React.FC = () => {
     } else {
       setBalance(null);
     }
-  }, [account]);
+  }, [account, setBalance]);
 
   const fetchBalance = async (address: string) => {
     try {
-      const response = await fetch(`https://proxy.berkeley.minaexplorer.com/wallet/${address}`);
+      setError(null);
+      const response = await fetch(`/api/balance?address=${address}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch balance');
+      }
       const data = await response.json();
       setBalance(data.balance);
     } catch (error) {
       console.error("Failed to fetch balance:", error);
+      setError('Failed to fetch balance. Please try again later.');
       setBalance(null);
     }
   };
@@ -42,6 +48,10 @@ const WalletConnection: React.FC = () => {
     setIsModalOpen(!isModalOpen);
   };
 
+  const getNetworkName = (networkId: string | null) => {
+    return Object.entries(DefaultSupportNetorkIDs).find(([_, value]) => value === networkId)?.[0] || 'Unknown';
+  };
+
   return (
     <div className={styles.walletConnection}>
       {!isConnected ? (
@@ -54,15 +64,18 @@ const WalletConnection: React.FC = () => {
             {shortenAddress(account)}
           </button>
           {isModalOpen && (
-            <div className={styles.modal}>
-              <div className={styles.modalContent}>
-                <h3>Wallet Details</h3>
-                <p>Address: {account}</p>
-                <p>Network: {network}</p>
-                <p>Balance: {balance ? `${balance} MINA` : 'Loading...'}</p>
-                <button onClick={toggleModal} className={styles.closeButton}>
-                  Close
-                </button>
+            <div className={styles.modalOverlay} onClick={toggleModal}>
+              <div className={styles.modal} onClick={e => e.stopPropagation()}>
+                <div className={styles.modalContent}>
+                  <h3>Wallet Details</h3>
+                  <p><strong>Address:</strong> {account}</p>
+                  <p><strong>Network:</strong> {getNetworkName(network)}</p>
+                  <p><strong>Balance:</strong> {balance ? `${balance} MINA` : 'Loading...'}</p>
+                  {error && <p className={styles.error}>{error}</p>}
+                  <button onClick={toggleModal} className={styles.closeButton}>
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           )}

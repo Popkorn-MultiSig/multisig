@@ -16,6 +16,7 @@ export const useMinaWallet = () => {
   const [account, setAccount] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [network, setNetwork] = useState<string | null>(null);
+  const [balance, setBalance] = useState<string | null>(null);
 
   const checkConnection = useCallback(async () => {
     if (typeof window.mina !== 'undefined') {
@@ -27,11 +28,13 @@ export const useMinaWallet = () => {
         } else {
           setAccount(null);
           setIsConnected(false);
+          setBalance(null);
         }
       } catch (error) {
         console.error("Failed to get accounts:", error);
         setAccount(null);
         setIsConnected(false);
+        setBalance(null);
       }
     }
   }, []);
@@ -73,28 +76,31 @@ export const useMinaWallet = () => {
     requestNetwork();
 
     if (window.mina) {
-      window.mina.on("accountsChanged", (accounts: string[]) => {
+      const handleAccountsChanged = (accounts: string[]) => {
         if (accounts.length > 0) {
           setAccount(accounts[0]);
           setIsConnected(true);
         } else {
           setAccount(null);
           setIsConnected(false);
+          setBalance(null);
         }
-      });
+      };
 
-      window.mina.on("chainChanged", (chainInfo: { networkId: string }) => {
+      const handleChainChanged = (chainInfo: { networkId: string }) => {
         setNetwork(chainInfo.networkId);
-      });
-    }
+        requestNetwork();
+      };
 
-    return () => {
-      if (window.mina) {
-        window.mina.removeAllListeners("accountsChanged");
-        window.mina.removeAllListeners("chainChanged");
-      }
-    };
+      window.mina.on("accountsChanged", handleAccountsChanged);
+      window.mina.on("chainChanged", handleChainChanged);
+
+      return () => {
+        window.mina.removeListener("accountsChanged", handleAccountsChanged);
+        window.mina.removeListener("chainChanged", handleChainChanged);
+      };
+    }
   }, [checkConnection, requestNetwork]);
 
-  return { account, isConnected, network, connectWallet, checkConnection };
+  return { account, isConnected, network, balance, setBalance, connectWallet, checkConnection };
 };
