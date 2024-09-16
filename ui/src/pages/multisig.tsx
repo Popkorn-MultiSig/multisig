@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import styles from '../styles/MultiSig.module.css';
+import { useMinaWallet } from '../hooks/useMinaWallet';
 
 const predefinedAddresses = [
   'B62qnXy1f75qq8c6HS2Am88Gk6UyvTHK3iSYh4Hb3nD6DS2eS6wZ4or',
@@ -12,6 +13,7 @@ const predefinedAddresses = [
 ];
 
 const MultiSig: React.FC = () => {
+  const { account, isConnected, connectWallet } = useMinaWallet();
   const [signers, setSigners] = useState<string[]>([]);
   const [threshold, setThreshold] = useState<number>(2);
   const [newSigner, setNewSigner] = useState<string>('');
@@ -28,8 +30,11 @@ const MultiSig: React.FC = () => {
     setSigners(signers.filter((_, i) => i !== index));
   };
 
-  const createMultiSig = () => {
-    if (signers.length >= threshold && walletName) {
+  const createMultiSig = async () => {
+    if (!isConnected) {
+      await connectWallet();
+    }
+    if (signers.length >= threshold && walletName && isConnected) {
       // Here you would typically interact with the Mina blockchain
       // For now, we'll just simulate success
       setIsSuccess(true);
@@ -76,78 +81,87 @@ const MultiSig: React.FC = () => {
         <p className={styles.tagline}>Secure your assets with multiple signatures</p>
 
         <div className={styles.card}>
-          <div className={styles.inputGroup}>
-            <label htmlFor="walletName">Wallet Name:</label>
-            <input
-              type="text"
-              id="walletName"
-              value={walletName}
-              onChange={(e) => setWalletName(e.target.value)}
-              className={styles.input}
-              placeholder="Enter wallet name"
-            />
-          </div>
-
-          <h2>Signers</h2>
-          <ul className={styles.signerList}>
-            {signers.map((signer, index) => (
-              <li key={index}>
-                {signer.slice(0, 10)}...{signer.slice(-10)}
-                <button onClick={() => removeSigner(index)} className={styles.removeButton}>
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-
-          <div className={styles.predefinedAddresses}>
-            <h3>Quick Add:</h3>
-            {predefinedAddresses.map((address, index) => (
-              <button
-                key={index}
-                onClick={() => addSigner(address)}
-                className={styles.addressButton}
-                disabled={signers.includes(address)}
-              >
-                Address {index + 1}
-              </button>
-            ))}
-          </div>
-
-          <div className={styles.addSigner}>
-            <input
-              type="text"
-              value={newSigner}
-              onChange={(e) => setNewSigner(e.target.value)}
-              placeholder="Enter custom signer address"
-              className={styles.input}
-            />
-            <button onClick={() => addSigner(newSigner)} className={styles.addButton}>
-              Add Signer
+          {!isConnected ? (
+            <button onClick={connectWallet} className={styles.connectButton}>
+              Connect Auro Wallet
             </button>
-          </div>
+          ) : (
+            <>
+              <p className={styles.connectedAccount}>Connected: {account}</p>
+              <div className={styles.inputGroup}>
+                <label htmlFor="walletName">Wallet Name:</label>
+                <input
+                  type="text"
+                  id="walletName"
+                  value={walletName}
+                  onChange={(e) => setWalletName(e.target.value)}
+                  className={styles.input}
+                  placeholder="Enter wallet name"
+                />
+              </div>
 
-          <div className={styles.threshold}>
-            <label htmlFor="threshold">Threshold (required signatures):</label>
-            <input
-              type="number"
-              id="threshold"
-              value={threshold}
-              onChange={(e) => setThreshold(Math.max(1, Math.min(signers.length, parseInt(e.target.value))))}
-              min="1"
-              max={signers.length}
-              className={styles.input}
-            />
-          </div>
+              <h2>Signers</h2>
+              <ul className={styles.signerList}>
+                {signers.map((signer, index) => (
+                  <li key={index}>
+                    {signer.slice(0, 10)}...{signer.slice(-10)}
+                    <button onClick={() => removeSigner(index)} className={styles.removeButton}>
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
 
-          <div className={styles.summary}>
-            <p>Total Signers: <span className={styles.code}>{signers.length}</span></p>
-            <p>Required Signatures: <span className={styles.code}>{threshold}</span></p>
-          </div>
+              <div className={styles.predefinedAddresses}>
+                <h3>Quick Add:</h3>
+                {predefinedAddresses.map((address, index) => (
+                  <button
+                    key={index}
+                    onClick={() => addSigner(address)}
+                    className={styles.addressButton}
+                    disabled={signers.includes(address)}
+                  >
+                    Address {index + 1}
+                  </button>
+                ))}
+              </div>
 
-          <button onClick={createMultiSig} className={styles.createButton} disabled={signers.length < threshold || !walletName}>
-            Create MultiSig Wallet
-          </button>
+              <div className={styles.addSigner}>
+                <input
+                  type="text"
+                  value={newSigner}
+                  onChange={(e) => setNewSigner(e.target.value)}
+                  placeholder="Enter custom signer address"
+                  className={styles.input}
+                />
+                <button onClick={() => addSigner(newSigner)} className={styles.addButton}>
+                  Add Signer
+                </button>
+              </div>
+
+              <div className={styles.threshold}>
+                <label htmlFor="threshold">Threshold (required signatures):</label>
+                <input
+                  type="number"
+                  id="threshold"
+                  value={threshold}
+                  onChange={(e) => setThreshold(Math.max(1, Math.min(signers.length, parseInt(e.target.value))))}
+                  min="1"
+                  max={signers.length}
+                  className={styles.input}
+                />
+              </div>
+
+              <div className={styles.summary}>
+                <p>Total Signers: <span className={styles.code}>{signers.length}</span></p>
+                <p>Required Signatures: <span className={styles.code}>{threshold}</span></p>
+              </div>
+
+              <button onClick={createMultiSig} className={styles.createButton} disabled={signers.length < threshold || !walletName}>
+                Create MultiSig Wallet
+              </button>
+            </>
+          )}
         </div>
 
         <Link href="/" className={styles.backButton}>
