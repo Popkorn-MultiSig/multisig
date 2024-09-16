@@ -1,0 +1,172 @@
+.container {
+    position: relative;
+    min-height: 100vh;
+  }
+  
+  .background {
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 0;
+  }
+  
+  .background::before {
+    background: url('/assets/hash-pattern.png');
+    z-index: 1;
+    -webkit-mask-image: linear-gradient(20deg, #000 25%, transparent);
+    mask-image: linear-gradient(20deg, #000 25%, transparent);
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+  
+  .backgroundGradients {
+    display: block;
+    position: absolute;
+    top: -5%;
+    left: -5%;
+    width: 110%;
+    height: 110%;
+    filter: blur(150px);
+    background: linear-gradient(45deg, rgba(0, 0, 255, 0.3), rgba(0, 255, 0, 0.3), rgba(255, 0, 0, 0.3));
+  }
+  
+  .main {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+    padding: 5rem;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+  }
+  
+  .title {
+    font-family: var(--font-monument-bold);
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    color: #2d2d2d;
+  }
+  
+  .tagline {
+    font-family: var(--font-monument-light);
+    font-size: 0.875rem;
+    letter-spacing: 0.082rem;
+    margin-bottom: 2rem;
+    color: #2d2d2d;
+  }
+  
+  .card {
+    background-color: rgba(255, 255, 255, 0.8);
+    border: 1px solid #2d2d2d;
+    border-radius: 4px 1px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 4px 4px 0 #2d2d2d;
+  }
+  
+  .card h2 {
+    font-family: var(--font-monument-bold);
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    letter-spacing: 0.13rem;
+  }
+  
+  .signerList {
+    list-style-type: none;
+    padding: 0;
+    margin-bottom: 1rem;
+  }
+  
+  .signerList li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-family: var(--font-monument);
+  }
+  
+  .removeButton {
+    background-color: #ff4d4f;
+    color: white;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    font-family: var(--font-monument);
+    border-radius: 2px;
+  }
+  
+  .addSigner {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .input {
+    padding: 0.5rem;
+    font-family: var(--font-monument);
+    border: 1px solid #2d2d2d;
+    border-radius: 2px;
+    flex-grow: 1;
+  }
+  
+  .addButton, .backButton {
+    background-color: #2d2d2d;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-family: var(--font-monument-bold);
+    border-radius: 2px;
+    transition: background-color 0.3s ease;
+  }
+  
+  .addButton:hover, .backButton:hover {
+    background-color: #4a4a4a;
+  }
+  
+  .threshold {
+    margin-bottom: 1rem;
+  }
+  
+  .threshold label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-family: var(--font-monument);
+  }
+  
+  .summary {
+    font-family: var(--font-monument-light);
+    margin-top: 1rem;
+  }
+  
+  .code {
+    font-family: var(--font-monument-bold);
+  }
+  
+  .backButton {
+    margin-top: 2rem;
+  }
+  
+  @media (max-width: 700px) {
+    .main {
+      padding: 2rem;
+    }
+  
+    .title {
+      font-size: 3rem;
+    }
+  
+    .card {
+      padding: 1.5rem;
+    }
+  }

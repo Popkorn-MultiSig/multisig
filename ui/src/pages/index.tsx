@@ -1,6 +1,6 @@
-
 import Head from 'next/head';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useEffect } from 'react';
 import GradientBG from '../components/GradientBG.js';
 import styles from '../styles/Home.module.css';
@@ -60,6 +60,23 @@ export default function Home() {
             Get started by editing
             <code className={styles.code}> src/pages/index.js</code> or <code className={styles.code}> src/pages/index.tsx</code>
           </p>
+          <div className={styles.grid}>
+            <Link href="/multisig" className={styles.card}>
+              <h2>
+                <span>MultiSig Wallet</span>
+                <div>
+                  <Image
+                    src={arrowRightSmall}
+                    alt="Arrow Right"
+                    width={16}
+                    height={16}
+                    priority
+                  />
+                </div>
+              </h2>
+              <p>Explore the MultiSig wallet functionality</p>
+            </Link>
+          </div>
           <div className={styles.grid}>
             <a
               href="https://docs.minaprotocol.com/zkapps"
