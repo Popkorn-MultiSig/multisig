@@ -13,7 +13,7 @@ const predefinedAddresses = [
 ];
 
 const MultiSig: React.FC = () => {
-  const { account, isConnected, connectWallet } = useMinaWallet();
+  const { account, isConnected } = useMinaWallet();
   const [signers, setSigners] = useState<string[]>([]);
   const [threshold, setThreshold] = useState<number>(2);
   const [newSigner, setNewSigner] = useState<string>('');
@@ -31,9 +31,6 @@ const MultiSig: React.FC = () => {
   };
 
   const createMultiSig = async () => {
-    if (!isConnected) {
-      await connectWallet();
-    }
     if (signers.length >= threshold && walletName && isConnected) {
       // Here you would typically interact with the Mina blockchain
       // For now, we'll just simulate success
@@ -82,12 +79,10 @@ const MultiSig: React.FC = () => {
 
         <div className={styles.card}>
           {!isConnected ? (
-            <button onClick={connectWallet} className={styles.connectButton}>
-              Connect Auro Wallet
-            </button>
+            <p className={styles.notConnected}>Please connect your Auro Wallet to create a MultiSig wallet.</p>
           ) : (
             <>
-              <p className={styles.connectedAccount}>Connected: {account}</p>
+              <p className={styles.connectedAccount}>Connected: {account ? `${account.slice(0, 10)}...${account.slice(-4)}` : 'Unknown'}</p>
               <div className={styles.inputGroup}>
                 <label htmlFor="walletName">Wallet Name:</label>
                 <input
@@ -104,7 +99,7 @@ const MultiSig: React.FC = () => {
               <ul className={styles.signerList}>
                 {signers.map((signer, index) => (
                   <li key={index}>
-                    {signer.slice(0, 10)}...{signer.slice(-10)}
+                    {signer.slice(0, 10)}...{signer.slice(-4)}
                     <button onClick={() => removeSigner(index)} className={styles.removeButton}>
                       Remove
                     </button>

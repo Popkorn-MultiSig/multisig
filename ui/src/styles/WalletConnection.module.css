@@ -1,0 +1,75 @@
+.walletConnection {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+  }
+  
+  .connectButton, .addressButton {
+    background-color: #1890ff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: var(--font-monument);
+    transition: background-color 0.3s;
+  }
+  
+  .connectButton:hover, .addressButton:hover {
+    background-color: #40a9ff;
+  }
+  
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .modalContent {
+    background-color: white;
+    padding: 20px;
+    border-radius: 5px;
+    width: 300px;
+  }
+  
+  .modalContent h3 {
+    font-family: var(--font-monument-bold);
+    margin-bottom: 10px;
+  }
+  
+  .modalContent p {
+    font-family: var(--font-monument);
+    margin-bottom: 10px;
+  }
+  
+  .disconnectButton, .closeButton {
+    background-color: #ff4d4f;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: var(--font-monument);
+    margin-right: 10px;
+    transition: background-color 0.3s;
+  }
+  
+  .disconnectButton:hover, .closeButton:hover {
+    background-color: #ff7875;
+  }
+  
+  .closeButton {
+    background-color: #d9d9d9;
+    color: #000;
+  }
+  
+  .closeButton:hover {
+    background-color: #bfbfbf;
+  }
