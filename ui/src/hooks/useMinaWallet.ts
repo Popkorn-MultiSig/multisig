@@ -60,11 +60,21 @@ export const useMinaWallet = () => {
     return null;
   }, []);
 
+  const disconnectWallet = useCallback(async () => {
+    setAccount(null);
+    setIsConnected(false);
+    setBalance(null);
+    setNetwork(null);
+    // TODO: Use disconnect method from the Mina wallet API
+    // This is just clearing the local state
+    return null;
+  }, []);
+
   const requestNetwork = useCallback(async () => {
     if (typeof window.mina !== 'undefined') {
       try {
         const networkInfo = await window.mina.requestNetwork();
-        setNetwork(networkInfo.networkId);
+        setNetwork(networkInfo.networkID);
       } catch (error) {
         console.error("Failed to get network:", error);
       }
@@ -74,7 +84,7 @@ export const useMinaWallet = () => {
   useEffect(() => {
     checkConnection();
     requestNetwork();
-
+    
     if (window.mina) {
       const handleAccountsChanged = (accounts: string[]) => {
         if (accounts.length > 0) {
@@ -102,5 +112,5 @@ export const useMinaWallet = () => {
     }
   }, [checkConnection, requestNetwork]);
 
-  return { account, isConnected, network, balance, setBalance, connectWallet, checkConnection };
+  return { account, isConnected, network, balance, setBalance, connectWallet, disconnectWallet, checkConnection };
 };

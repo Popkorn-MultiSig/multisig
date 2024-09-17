@@ -4,7 +4,7 @@ import styles from '@/styles/WalletConnection.module.css';
 import { DefaultSupportNetorkIDs } from '@/constants/config';
 
 const WalletConnection: React.FC = () => {
-  const { account, isConnected, network, balance, setBalance, connectWallet, checkConnection } = useMinaWallet();
+  const { account, isConnected, network, balance, setBalance, connectWallet, disconnectWallet, checkConnection } = useMinaWallet();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,7 +28,7 @@ const WalletConnection: React.FC = () => {
         throw new Error('Failed to fetch balance');
       }
       const data = await response.json();
-      setBalance(data.balance);
+      setBalance(data.balance.total);
     } catch (error) {
       console.error("Failed to fetch balance:", error);
       setError('Failed to fetch balance. Please try again later.');
@@ -42,6 +42,10 @@ const WalletConnection: React.FC = () => {
 
   const handleConnect = async () => {
     await connectWallet();
+  };
+
+  const handleDisconnect = async () => {
+    await disconnectWallet();
   };
 
   const toggleModal = () => {
@@ -74,6 +78,10 @@ const WalletConnection: React.FC = () => {
                   {error && <p className={styles.error}>{error}</p>}
                   <button onClick={toggleModal} className={styles.closeButton}>
                     Close
+                  </button>
+                  <p></p>
+                  <button onClick={handleDisconnect} className={styles.closeButton}>
+                    Disconnect
                   </button>
                 </div>
               </div>
