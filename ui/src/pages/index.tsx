@@ -1,8 +1,9 @@
+import React from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect } from 'react';
-import GradientBG from '../components/GradientBG.js';
+import GradientBG from '../components/GradientBG';
 import styles from '../styles/Home.module.css';
 import heroMinaLogo from '../../public/assets/hero-mina-logo.svg';
 import arrowRightSmall from '../../public/assets/arrow-right-small.svg';
@@ -30,8 +31,8 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Mina zkApp UI</title>
-        <meta name="description" content="built with o1js" />
+        <title>MultiSig Wallet - Mina zkApp</title>
+        <meta name="description" content="MultiSig Wallet built with o1js" />
         <link rel="icon" href="/assets/favicon.ico" />
       </Head>
       <GradientBG>
@@ -51,19 +52,15 @@ export default function Home() {
                 priority
               />
             </a>
+            <h1 className={styles.title}>MultiSig Wallet</h1>
             <p className={styles.tagline}>
-              built with
-              <code className={styles.code}> o1js</code>
+              Secure your assets with multiple signatures
             </p>
           </div>
-          <p className={styles.start}>
-            Get started by editing
-            <code className={styles.code}> src/pages/index.js</code> or <code className={styles.code}> src/pages/index.tsx</code>
-          </p>
           <div className={styles.grid}>
-            <Link href="/multisig" className={styles.card}>
+            <Link href="/create-multisig" className={styles.card}>
               <h2>
-                <span>MultiSig Wallet</span>
+                <span>Create</span>
                 <div>
                   <Image
                     src={arrowRightSmall}
@@ -74,90 +71,53 @@ export default function Home() {
                   />
                 </div>
               </h2>
-              <p>Explore the MultiSig wallet functionality</p>
+              <p>Create a new MultiSig wallet</p>
             </Link>
-          </div>
-          <div className={styles.grid}>
-            <a
-              href="https://docs.minaprotocol.com/zkapps"
-              className={styles.card}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <Link href="/overview" className={styles.card}>
               <h2>
-                <span>DOCS</span>
+                <span>Create</span>
                 <div>
                   <Image
                     src={arrowRightSmall}
-                    alt="Mina Logo"
+                    alt="Arrow Right"
                     width={16}
                     height={16}
                     priority
                   />
                 </div>
               </h2>
-              <p>Explore zkApps, how to build one, and in-depth references</p>
-            </a>
-            <a
-              href="https://docs.minaprotocol.com/zkapps/tutorials/hello-world"
-              className={styles.card}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+              <p>View and manage your MultiSig wallets</p>
+            </Link>
+            <Link href="/details" className={styles.card}>
               <h2>
-                <span>TUTORIALS</span>
+                <span>Details</span>
                 <div>
                   <Image
                     src={arrowRightSmall}
-                    alt="Mina Logo"
+                    alt="Arrow Right"
                     width={16}
                     height={16}
                     priority
                   />
                 </div>
               </h2>
-              <p>Learn with step-by-step o1js tutorials</p>
-            </a>
-            <a
-              href="https://discord.gg/minaprotocol"
-              className={styles.card}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+              <p>View details of a specific MultiSig wallet</p>
+            </Link>
+            <Link href="/about" className={styles.card}>
               <h2>
-                <span>QUESTIONS</span>
+                <span>About</span>
                 <div>
                   <Image
                     src={arrowRightSmall}
-                    alt="Mina Logo"
+                    alt="Arrow Right"
                     width={16}
                     height={16}
                     priority
                   />
                 </div>
               </h2>
-              <p>Ask questions on our Discord server</p>
-            </a>
-            <a
-              href="https://docs.minaprotocol.com/zkapps/how-to-deploy-a-zkapp"
-              className={styles.card}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <h2>
-                <span>DEPLOY</span>
-                <div>
-                  <Image
-                    src={arrowRightSmall}
-                    alt="Mina Logo"
-                    width={16}
-                    height={16}
-                    priority
-                  />
-                </div>
-              </h2>
-              <p>Deploy a zkApp to Testnet</p>
-            </a>
+              <p>Check me out</p>
+            </Link>
           </div>
         </main>
       </GradientBG>
