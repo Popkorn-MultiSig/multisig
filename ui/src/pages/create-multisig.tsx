@@ -1,8 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import styles from '../styles/MultiSig.module.css';
 import { useMinaWallet } from '../hooks/useMinaWallet';
+import { Popkorn, MerkleWitness8 } from '../../../contracts/build/src/popkorn.js'; 
+
+
+import { 
+  PrivateKey, 
+  PublicKey, 
+  UInt64, 
+  Mina, 
+  AccountUpdate, 
+  Field, 
+  MerkleTree 
+} from 'o1js';
 
 const predefinedAddresses = [
   'B62qnXy1f75qq8c6HS2Am88Gk6UyvTHK3iSYh4Hb3nD6DS2eS6wZ4or',
@@ -19,6 +31,17 @@ const MultiSig: React.FC = () => {
   const [newSigner, setNewSigner] = useState<string>('');
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [walletName, setWalletName] = useState<string>('');
+  const [zkAppAddress, setZkAppAddress] = useState<string>('');
+
+  useEffect(() => {
+    (async () => {
+      await Popkorn.compile();
+      const Berkeley = Mina.Network(
+        'https://proxy.devnet.minaexplorer.com/graphql'
+      );
+      Mina.setActiveInstance(Berkeley);
+    })();
+  }, []);
 
   const addSigner = (address: string) => {
     if (!signers.includes(address)) {
@@ -31,36 +54,40 @@ const MultiSig: React.FC = () => {
   };
 
   const createMultiSig = async () => {
-    if (signers.length >= threshold && walletName && isConnected) {
-      // Here you would typically interact with the Mina blockchain
-      // For now, we'll just simulate success
-      setIsSuccess(true);
+    if (signers.length >= threshold && walletName && isConnected && account) {
+      try {
+        const zkAppPrivateKey = PrivateKey.fromBase58(process.env.NEXT_PUBLIC_ZKAPP_PRIVATE_KEY || '');
+        const zkAppAddress = zkAppPrivateKey.toPublicKey();
+        setZkAppAddress(zkAppAddress.toBase58());
+
+        const zkApp = new Popkorn(zkAppAddress);
+
+        const tree = new MerkleTree(8);
+
+        const tx = await Mina.transaction(async () => {
+          await zkApp.initializeContract();
+
+          for (let i = 0; i < signers.length; i++) {
+            const publicKey = PublicKey.fromBase58(signers[i]);
+            const witness = new MerkleWitness8(tree.getWitness(BigInt(i)));
+            await zkApp.addSigner(publicKey, witness);
+          }
+
+          await zkApp.setThreshold(UInt64.from(threshold));
+        });
+
+        await tx.prove();
+        const txSent = await tx.sign([zkAppPrivateKey]).send();
+
+        console.log('Transaction sent:', txSent.hash);
+        await txSent.wait();
+
+        setIsSuccess(true);
+      } catch (error) {
+        console.error('Error creating MultiSig:', error);
+      }
     }
   };
-
-  if (isSuccess) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.background}>
-          <div className={styles.backgroundGradients}></div>
-        </div>
-        <main className={styles.main}>
-          <h1 className={styles.title}>MultiSig Created!</h1>
-          <div className={styles.card}>
-            <h2>{walletName}</h2>
-            <p>Your MultiSig wallet has been successfully created with the following details:</p>
-            <ul className={styles.summaryList}>
-              <li>Number of Signers: {signers.length}</li>
-              <li>Threshold: {threshold}</li>
-            </ul>
-            <Link href="/" className={styles.backButton}>
-              Back to Home
-            </Link>
-          </div>
-        </main>
-      </div>
-    );
-  }
 
   return (
     <div className={styles.container}>
@@ -151,10 +178,9 @@ const MultiSig: React.FC = () => {
                 <p>Total Signers: <span className={styles.code}>{signers.length}</span></p>
                 <p>Required Signatures: <span className={styles.code}>{threshold}</span></p>
               </div>
-
               <button onClick={createMultiSig} className={styles.createButton} disabled={signers.length < threshold || !walletName}>
-                Create MultiSig Wallet
-              </button>
+              Create MultiSig Wallet
+      </button>
             </>
           )}
         </div>
