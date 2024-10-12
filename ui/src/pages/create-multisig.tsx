@@ -5,7 +5,6 @@ import styles from '../styles/MultiSig.module.css';
 import { useMinaWallet } from '../hooks/useMinaWallet';
 import { Popkorn, MerkleWitness8 } from '../../../contracts/build/src/popkorn.js'; 
 
-
 import { 
   PrivateKey, 
   PublicKey, 
@@ -15,6 +14,12 @@ import {
   Field, 
   MerkleTree 
 } from 'o1js';
+
+declare global {
+  interface Window {
+    mina: any;
+  }
+}
 
 const predefinedAddresses = [
   'B62qnXy1f75qq8c6HS2Am88Gk6UyvTHK3iSYh4Hb3nD6DS2eS6wZ4or',
@@ -37,7 +42,7 @@ const MultiSig: React.FC = () => {
     (async () => {
       await Popkorn.compile();
       const Berkeley = Mina.Network(
-        'https://proxy.devnet.minaexplorer.com/graphql'
+        'https://proxy.berkeley.minaexplorer.com/graphql'
       );
       Mina.setActiveInstance(Berkeley);
     })();
@@ -56,35 +61,62 @@ const MultiSig: React.FC = () => {
   const createMultiSig = async () => {
     if (signers.length >= threshold && walletName && isConnected && account) {
       try {
-        const zkAppPrivateKey = PrivateKey.fromBase58(process.env.NEXT_PUBLIC_ZKAPP_PRIVATE_KEY || '');
+        console.log("Account:", account); // Log the account for debugging
+  
+        let sender;
+        try {
+          sender = PublicKey.fromBase58(account);
+        } catch (error) {
+          console.error("Error parsing sender address:", error);
+          alert("Invalid sender address. Please check your wallet connection.");
+          return;
+        }
+  
+        const zkAppPrivateKey = PrivateKey.random();
         const zkAppAddress = zkAppPrivateKey.toPublicKey();
         setZkAppAddress(zkAppAddress.toBase58());
-
+  
         const zkApp = new Popkorn(zkAppAddress);
-
+  
         const tree = new MerkleTree(8);
-
+  
         const tx = await Mina.transaction(async () => {
+          AccountUpdate.fundNewAccount(sender);
+          await zkApp.deploy();
           await zkApp.initializeContract();
-
+  
           for (let i = 0; i < signers.length; i++) {
-            const publicKey = PublicKey.fromBase58(signers[i]);
+            let signerPublicKey;
+            try {
+              signerPublicKey = PublicKey.fromBase58(signers[i]);
+            } catch (error) {
+              console.error(`Error parsing signer address at index ${i}:`, error);
+              alert(`Invalid signer address at index ${i}. Please check the address.`);
+              return;
+            }
             const witness = new MerkleWitness8(tree.getWitness(BigInt(i)));
-            await zkApp.addSigner(publicKey, witness);
+            await zkApp.addSigner(signerPublicKey, witness);
           }
-
+  
           await zkApp.setThreshold(UInt64.from(threshold));
         });
-
+  
         await tx.prove();
-        const txSent = await tx.sign([zkAppPrivateKey]).send();
-
-        console.log('Transaction sent:', txSent.hash);
-        await txSent.wait();
-
+        
+        // Use the wallet to sign and send the transaction
+        const { hash } = await window.mina.sendTransaction({
+          transaction: tx.toJSON(),
+          feePayer: {
+            fee: 0.1,
+            memo: 'Create MultiSig Wallet',
+          },
+        });
+  
+        console.log('Transaction sent:', hash);
         setIsSuccess(true);
       } catch (error) {
-        console.error('Error creating MultiSig:', error);
+        console.error('Error creating MultiSig:', error as Error);
+        alert(`Error creating MultiSig: ${(error as Error).message}`);
       }
     }
   };
@@ -179,8 +211,8 @@ const MultiSig: React.FC = () => {
                 <p>Required Signatures: <span className={styles.code}>{threshold}</span></p>
               </div>
               <button onClick={createMultiSig} className={styles.createButton} disabled={signers.length < threshold || !walletName}>
-              Create MultiSig Wallet
-      </button>
+                Create MultiSig Wallet
+              </button>
             </>
           )}
         </div>
