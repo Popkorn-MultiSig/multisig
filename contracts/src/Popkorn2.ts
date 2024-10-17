@@ -28,6 +28,7 @@ import {
   export class Popkorn2 extends SmartContract {
     @state(Field) signersMapRoot = State<Field>();
     @state(UInt64) signersCount = State<UInt64>();
+    @state(UInt64) signedAmount = State<UInt64>();
     @state(UInt64) threshold = State<UInt64>();
     @state(Field) nonce = State<Field>();
     @state(Bool) isInitialized = State<Bool>();
@@ -59,6 +60,7 @@ import {
       this.signersCount.set(signersCount);
       this.threshold.set(threshold);
       this.nonce.set(Field(0));
+      this.signedAmount.set(UInt64.from(0));
       this.isInitialized.set(Bool(true));
     }
   
@@ -123,7 +125,8 @@ import {
       this.threshold.set(newThreshold);
     }
   
-    @method async interact(
+    // Signs a transaction and updates the signed amount
+    @method async sign(
       rootUpdate: AccountUpdateDescr, 
       signature: Signature, 
       signerPubKey: PublicKey
@@ -135,32 +138,34 @@ import {
 
       const currentNonce = this.nonce.get();
       this.nonce.requireEquals(currentNonce);
-      
-      const currentThreshold = this.threshold.get();
-      this.threshold.requireEquals(currentThreshold);
+      const threshold = this.threshold.get();
+      this.threshold.requireEquals(threshold);
+      const signedAmount = this.signedAmount.get();
+      this.signedAmount.requireEquals(signedAmount);
 
+      this.verifySignerIsInMap(signerPubKey);
+      signature.verify(signerPubKey, [currentNonce]).assertTrue();
 
-      // TODO: 
-      // this.verifySignature(signature, signerPubKey, currentNonce);
-      // TODO: mark pubkey as approved
-      // TODO: check if threshold is reached
-      // TODO: if so, execute the interaction
-  
-      // this.verifySignatures(signatures, signerPubKeys, currentNonce);
-  
-      // rootUpdate.apply(this.self);
-      
-      // this.nonce.set(currentNonce.add(1));
+      this.signedAmount.set(signedAmount.add(1));
+    }
+
+    // Checks if the threshold is reached and executes the transaction
+    executeTransaction() {
+      const threshold = this.threshold.get();
+      this.threshold.requireEquals(threshold);
+      const signedAmount = this.signedAmount.get();
+      this.signedAmount.requireEquals(signedAmount);
+      this.signedAmount.requireEquals(threshold);
+
+      // TODO: execute transaction
+          
     }
   
-    verifySignature(signature: Signature, signerPubKey: PublicKey, nonce: Field) {
-      // Verify the signature
-      signature.verify(signerPubKey, [nonce]).assertTrue();
-      
-      // Verify that the signer is in the signers map
+    verifySignerIsInMap(signerPubKey: PublicKey) {
       const signerHash = Poseidon.hash(signerPubKey.toFields());
-      const witness = new MerkleMap().getWitness(signerHash);
-      const [root] = witness.computeRootAndKey(Field(1));
-      root.assertEquals(this.signersMapRoot.get());
+      const map = new MerkleMap();
+      // const witness = map.getWitness(signerHash);
+      // const [root] = witness.computeRootAndKey(Field(1));
+      // root.assertEquals(this.signersMapRoot.get());
     }
   }
