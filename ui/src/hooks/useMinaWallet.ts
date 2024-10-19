@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 interface MinaWindow extends Window {
-  mina?: any;
+  mina: any;
 }
 
 declare let window: MinaWindow;

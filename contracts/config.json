@@ -18,6 +18,15 @@
       "feepayerAlias": "test-deploy",
       "fee": "2",
       "smartContract": "Popkorn2"
+    },
+    "popkorn3": {
+      "networkId": "testnet",
+      "url": "https://proxy.devnet.minaexplorer.com/graphql",
+      "keyPath": "keys/popkorn3.json",
+      "feepayerKeyPath": "/Users/kacper/.cache/zkapp-cli/keys/test-deploy.json",
+      "feepayerAlias": "test-deploy",
+      "fee": "3",
+      "smartContract": "Popkorn3"
     }
   }
 }
