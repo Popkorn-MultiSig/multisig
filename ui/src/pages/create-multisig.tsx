@@ -1,228 +1,287 @@
-import React, { useState, useEffect } from 'react';
-import Head from 'next/head';
-import Link from 'next/link';
-import styles from '../styles/MultiSig.module.css';
+import { useState, useEffect } from 'react';
+import { PublicKey, UInt64, Field, MerkleMap, Int64, Signature, Poseidon } from 'o1js';
 import { useMinaWallet } from '../hooks/useMinaWallet';
-import { Popkorn, MerkleWitness8 } from '../../../contracts/build/src/popkorn.js'; 
+import { usePopkorn3Contract } from '../hooks/usePopkorn';
+import { AccountUpdateDescr } from '../../../contracts/build/src/Popkorn3';
 
-import { 
-  PrivateKey, 
-  PublicKey, 
-  UInt64, 
-  Mina, 
-  AccountUpdate, 
-  Field, 
-  MerkleTree 
-} from 'o1js';
+declare const window: Window & { mina: any };
 
-declare global {
-  interface Window {
-    mina: any;
-  }
-}
+const ZKAPP_ADDRESS = 'B62qpE6LNNhE8rT7mQLq75APVKyjagzX4UBvKRs9NpmgoqJUrAWUP2n';
 
-const predefinedAddresses = [
-  'B62qnXy1f75qq8c6HS2Am88Gk6UyvTHK3iSYh4Hb3nD6DS2eS6wZ4or',
-  'B62qjsV6WQwTeEWrNrRRBP6VaaLvQhwWTnFi4WP4LQjGvpfZEumXzxb',
-  'B62qodtMG7Dwo7f6zWdzxWkG8ULtKZBFjbq9H6RTqMm4KhJVh1VPwrN',
-  'B62qrYzMtqbdW3oRv6aX9G24L2ZqN6VnbDY8mJi8x3EWDbZw2bK6kDK',
-  'B62qkRoGi7bbDJzFHpoSzQRqYSkjqUYiR8yM9c6aZpzKmke6zXxcS69',
-];
+export default function Home() {
+  const { account, isConnected, connectWallet, disconnectWallet } = useMinaWallet();
+  const { 
+    isLoading, 
+    error, 
+    setupMultisig, 
+    addSigner, 
+    removeSigner, 
+    setThreshold: contractSetThreshold, 
+    sign, 
+    executeTransaction 
+  } = usePopkorn3Contract(ZKAPP_ADDRESS);
 
-const MultiSig: React.FC = () => {
-  const { account, isConnected } = useMinaWallet();
-  const [signers, setSigners] = useState<string[]>([]);
-  const [threshold, setThreshold] = useState<number>(2);
-  const [newSigner, setNewSigner] = useState<string>('');
-  const [isSuccess, setIsSuccess] = useState<boolean>(false);
-  const [walletName, setWalletName] = useState<string>('');
-  const [zkAppAddress, setZkAppAddress] = useState<string>('');
+  const [signersMapRoot, setSignersMapRoot] = useState('');
+  const [signersCount, setSignersCount] = useState('');
+  const [threshold, setThreshold] = useState('');
+  const [newSignerPubKey, setNewSignerPubKey] = useState('');
+  const [removeSignerPubKey, setRemoveSignerPubKey] = useState('');
+  const [newThreshold, setNewThreshold] = useState('');
+  const [transactionAmount, setTransactionAmount] = useState('');
+  const [status, setStatus] = useState('');
+  
+  const [signersMap, setSignersMap] = useState<MerkleMap | null>(null);
+  const [o1jsLoaded, setO1jsLoaded] = useState(false);
 
   useEffect(() => {
     (async () => {
-      await Popkorn.compile();
-      const Berkeley = Mina.Network(
-        'https://proxy.berkeley.minaexplorer.com/graphql'
-      );
-      Mina.setActiveInstance(Berkeley);
+      await import('o1js');
+      setO1jsLoaded(true);
+      setSignersMap(new MerkleMap());
     })();
   }, []);
 
-  const addSigner = (address: string) => {
-    if (!signers.includes(address)) {
-      setSigners([...signers, address]);
+  useEffect(() => {
+    if (isConnected) {
+      setStatus('Wallet connected. Ready to interact with the contract.');
+    } else {
+      setStatus('Please connect your wallet to continue.');
+    }
+  }, [isConnected]);
+
+  const handleSetupMultisig = async () => {
+    if (!isConnected || !signersMap) {
+      setStatus('Please connect your wallet and wait for initialization.');
+      return;
+    }
+    try {
+      setStatus('Setting up multisig...');
+      const txHash = await setupMultisig(
+        Field(signersMapRoot),
+        UInt64.from(signersCount),
+        UInt64.from(threshold)
+      );
+      setStatus(`Multisig setup successful! Transaction hash: ${txHash}`);
+    } catch (err) {
+      setStatus(`Failed to setup multisig: ${(err as Error).message}`);
     }
   };
 
-  const removeSigner = (index: number) => {
-    setSigners(signers.filter((_, i) => i !== index));
-  };
-
-  const createMultiSig = async () => {
-    if (signers.length >= threshold && walletName && isConnected && account) {
-      try {
-        console.log("Account:", account); // Log the account for debugging
-  
-        let sender;
-        try {
-          sender = PublicKey.fromBase58(account);
-        } catch (error) {
-          console.error("Error parsing sender address:", error);
-          alert("Invalid sender address. Please check your wallet connection.");
-          return;
-        }
-  
-        const zkAppPrivateKey = PrivateKey.random();
-        const zkAppAddress = zkAppPrivateKey.toPublicKey();
-        setZkAppAddress(zkAppAddress.toBase58());
-  
-        const zkApp = new Popkorn(zkAppAddress);
-  
-        const tree = new MerkleTree(8);
-  
-        const tx = await Mina.transaction(async () => {
-          AccountUpdate.fundNewAccount(sender);
-          await zkApp.deploy();
-          await zkApp.initializeContract();
-  
-          for (let i = 0; i < signers.length; i++) {
-            let signerPublicKey;
-            try {
-              signerPublicKey = PublicKey.fromBase58(signers[i]);
-            } catch (error) {
-              console.error(`Error parsing signer address at index ${i}:`, error);
-              alert(`Invalid signer address at index ${i}. Please check the address.`);
-              return;
-            }
-            const witness = new MerkleWitness8(tree.getWitness(BigInt(i)));
-            await zkApp.addSigner(signerPublicKey, witness);
-          }
-  
-          await zkApp.setThreshold(UInt64.from(threshold));
-        });
-  
-        await tx.prove();
-        
-        // Use the wallet to sign and send the transaction
-        const { hash } = await window.mina.sendTransaction({
-          transaction: tx.toJSON(),
-          feePayer: {
-            fee: 0.1,
-            memo: 'Create MultiSig Wallet',
-          },
-        });
-  
-        console.log('Transaction sent:', hash);
-        setIsSuccess(true);
-      } catch (error) {
-        console.error('Error creating MultiSig:', error as Error);
-        alert(`Error creating MultiSig: ${(error as Error).message}`);
-      }
+  const handleAddSigner = async () => {
+    if (!isConnected || !signersMap) {
+      setStatus('Please connect your wallet and wait for initialization.');
+      return;
+    }
+    try {
+      setStatus('Adding signer...');
+      const signerPubKey = PublicKey.fromBase58(newSignerPubKey);
+      const witness = signersMap.getWitness(signerPubKey.toFields()[0]);
+      const txHash = await addSigner(signerPubKey, witness);
+      signersMap.set(signerPubKey.toFields()[0], Field(1));
+      setStatus(`Signer added successfully! Transaction hash: ${txHash}`);
+      setNewSignerPubKey('');
+    } catch (err) {
+      setStatus(`Failed to add signer: ${(err as Error).message}`);
     }
   };
+
+  const handleRemoveSigner = async () => {
+    if (!isConnected || !signersMap) {
+      setStatus('Please connect your wallet and wait for initialization.');
+      return;
+    }
+    try {
+      setStatus('Removing signer...');
+      const signerPubKey = PublicKey.fromBase58(removeSignerPubKey);
+      const witness = signersMap.getWitness(signerPubKey.toFields()[0]);
+      const txHash = await removeSigner(signerPubKey, witness);
+      signersMap.set(signerPubKey.toFields()[0], Field(0));
+      setStatus(`Signer removed successfully! Transaction hash: ${txHash}`);
+      setRemoveSignerPubKey('');
+    } catch (err) {
+      setStatus(`Failed to remove signer: ${(err as Error).message}`);
+    }
+  };
+
+  const handleSetThreshold = async () => {
+    if (!isConnected) {
+      setStatus('Please connect your wallet first.');
+      return;
+    }
+    try {
+      setStatus('Setting new threshold...');
+      const txHash = await contractSetThreshold(UInt64.from(newThreshold));
+      setStatus(`Threshold updated successfully! Transaction hash: ${txHash}`);
+      setNewThreshold('');
+    } catch (err) {
+      setStatus(`Failed to set threshold: ${(err as Error).message}`);
+    }
+  };
+
+  const handleSign = async () => {
+    if (!isConnected || !signersMap || !account) {
+      setStatus('Please connect your wallet and wait for initialization.');
+      return;
+    }
+    try {
+      setStatus('Signing transaction...');
+      const accountUpdateDescr = new AccountUpdateDescr({ balanceChange: Int64.from(transactionAmount) });
+      
+      const messageToSign = Poseidon.hash(
+        accountUpdateDescr.balanceChange.toFields()
+      ).toString();
+  
+      const signature = await window.mina.signMessage({
+        message: messageToSign,
+      });
+  
+      const o1jsSignature = Signature.fromJSON(signature);
+  
+      const signerPubKey = PublicKey.fromBase58(account);
+      const witness = signersMap.getWitness(signerPubKey.toFields()[0]);
+      
+      const txHash = await sign(accountUpdateDescr, o1jsSignature, signerPubKey, witness);
+      setStatus(`Transaction signed successfully! Transaction hash: ${txHash}`);
+    } catch (err) {
+      setStatus(`Failed to sign transaction: ${(err as Error).message}`);
+    }
+  };
+
+  const handleExecuteTransaction = async () => {
+    if (!isConnected) {
+      setStatus('Please connect your wallet first.');
+      return;
+    }
+    try {
+      setStatus('Executing transaction...');
+      const accountUpdateDescr = new AccountUpdateDescr({ balanceChange: Int64.from(transactionAmount) });
+      const txHash = await executeTransaction(accountUpdateDescr);
+      setStatus(`Transaction executed successfully! Transaction hash: ${txHash}`);
+      setTransactionAmount('');
+    } catch (err) {
+      setStatus(`Failed to execute transaction: ${(err as Error).message}`);
+    }
+  };
+
+  if (!o1jsLoaded) return <div>Loading...</div>;
 
   return (
-    <div className={styles.container}>
-      <Head>
-        <title>Create MultiSig Wallet - MINA</title>
-        <meta name="description" content="Create a MultiSig wallet on MINA" />
-      </Head>
-
-      <div className={styles.background}>
-        <div className={styles.backgroundGradients}></div>
-      </div>
-
-      <main className={styles.main}>
-        <h1 className={styles.title}>Create MultiSig Wallet</h1>
-        <p className={styles.tagline}>Secure your assets with multiple signatures</p>
-
-        <div className={styles.card}>
+    <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
+      <div className="relative py-3 sm:max-w-xl sm:mx-auto">
+        <div className="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
+          <h1 className="text-2xl font-semibold mb-5">Popkorn3 Multisig Wallet</h1>
+          
           {!isConnected ? (
-            <p className={styles.notConnected}>Please connect your Auro Wallet to create a MultiSig wallet.</p>
+            <button onClick={connectWallet} className="w-full bg-blue-500 text-white px-4 py-2 rounded">
+              Connect Wallet
+            </button>
           ) : (
             <>
-              <p className={styles.connectedAccount}>Connected: {account ? `${account.slice(0, 10)}...${account.slice(-4)}` : 'Unknown'}</p>
-              <div className={styles.inputGroup}>
-                <label htmlFor="walletName">Wallet Name:</label>
-                <input
-                  type="text"
-                  id="walletName"
-                  value={walletName}
-                  onChange={(e) => setWalletName(e.target.value)}
-                  className={styles.input}
-                  placeholder="Enter wallet name"
-                />
-              </div>
-
-              <h2>Signers</h2>
-              <ul className={styles.signerList}>
-                {signers.map((signer, index) => (
-                  <li key={index}>
-                    {signer.slice(0, 10)}...{signer.slice(-4)}
-                    <button onClick={() => removeSigner(index)} className={styles.removeButton}>
-                      Remove
-                    </button>
-                  </li>
-                ))}
-              </ul>
-
-              <div className={styles.predefinedAddresses}>
-                <h3>Quick Add:</h3>
-                {predefinedAddresses.map((address, index) => (
-                  <button
-                    key={index}
-                    onClick={() => addSigner(address)}
-                    className={styles.addressButton}
-                    disabled={signers.includes(address)}
-                  >
-                    Address {index + 1}
-                  </button>
-                ))}
-              </div>
-
-              <div className={styles.addSigner}>
-                <input
-                  type="text"
-                  value={newSigner}
-                  onChange={(e) => setNewSigner(e.target.value)}
-                  placeholder="Enter custom signer address"
-                  className={styles.input}
-                />
-                <button onClick={() => addSigner(newSigner)} className={styles.addButton}>
-                  Add Signer
-                </button>
-              </div>
-
-              <div className={styles.threshold}>
-                <label htmlFor="threshold">Threshold (required signatures):</label>
-                <input
-                  type="number"
-                  id="threshold"
-                  value={threshold}
-                  onChange={(e) => setThreshold(Math.max(1, Math.min(signers.length, parseInt(e.target.value))))}
-                  min="1"
-                  max={signers.length}
-                  className={styles.input}
-                />
-              </div>
-
-              <div className={styles.summary}>
-                <p>Total Signers: <span className={styles.code}>{signers.length}</span></p>
-                <p>Required Signatures: <span className={styles.code}>{threshold}</span></p>
-              </div>
-              <button onClick={createMultiSig} className={styles.createButton} disabled={signers.length < threshold || !walletName}>
-                Create MultiSig Wallet
+              <p className="mb-4">Connected Account: {account}</p>
+              <button onClick={disconnectWallet} className="w-full bg-red-500 text-white px-4 py-2 rounded mb-4">
+                Disconnect Wallet
               </button>
+
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-xl font-semibold mb-2">Setup Multisig</h2>
+                  <input
+                    type="text"
+                    placeholder="Signers Map Root"
+                    value={signersMapRoot}
+                    onChange={(e) => setSignersMapRoot(e.target.value)}
+                    className="w-full px-3 py-2 border rounded"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Signers Count"
+                    value={signersCount}
+                    onChange={(e) => setSignersCount(e.target.value)}
+                    className="w-full px-3 py-2 border rounded mt-2"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Threshold"
+                    value={threshold}
+                    onChange={(e) => setThreshold(e.target.value)}
+                    className="w-full px-3 py-2 border rounded mt-2"
+                  />
+                  <button onClick={handleSetupMultisig} className="w-full bg-green-500 text-white px-4 py-2 rounded mt-2">
+                    Setup Multisig
+                  </button>
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-semibold mb-2">Add Signer</h2>
+                  <input
+                    type="text"
+                    placeholder="New Signer Public Key"
+                    value={newSignerPubKey}
+                    onChange={(e) => setNewSignerPubKey(e.target.value)}
+                    className="w-full px-3 py-2 border rounded"
+                  />
+                  <button onClick={handleAddSigner} className="w-full bg-blue-500 text-white px-4 py-2 rounded mt-2">
+                    Add Signer
+                  </button>
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-semibold mb-2">Remove Signer</h2>
+                  <input
+                    type="text"
+                    placeholder="Remove Signer Public Key"
+                    value={removeSignerPubKey}
+                    onChange={(e) => setRemoveSignerPubKey(e.target.value)}
+                    className="w-full px-3 py-2 border rounded"
+                  />
+                  <button onClick={handleRemoveSigner} className="w-full bg-red-500 text-white px-4 py-2 rounded mt-2">
+                    Remove Signer
+                  </button>
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-semibold mb-2">Set Threshold</h2>
+                  <input
+                    type="number"
+                    placeholder="New Threshold"
+                    value={newThreshold}
+                    onChange={(e) => setNewThreshold(e.target.value)}
+                    className="w-full px-3 py-2 border rounded"
+                  />
+                  <button onClick={handleSetThreshold} className="w-full bg-yellow-500 text-white px-4 py-2 rounded mt-2">
+                    Set Threshold
+                  </button>
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-semibold mb-2">Sign Transaction</h2>
+                  <input
+                    type="number"
+                    placeholder="Transaction Amount"
+                    value={transactionAmount}
+                    onChange={(e) => setTransactionAmount(e.target.value)}
+                    className="w-full px-3 py-2 border rounded"
+                  />
+                  <button onClick={handleSign} className="w-full bg-purple-500 text-white px-4 py-2 rounded mt-2">
+                    Sign Transaction
+                  </button>
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-semibold mb-2">Execute Transaction</h2>
+                  <button onClick={handleExecuteTransaction} className="w-full bg-indigo-500 text-white px-4 py-2 rounded">
+                    Execute Transaction
+                  </button>
+                </div>
+              </div>
+
+              {isLoading && <p className="mt-4 text-center">Loading...</p>}
+              {error && <p className="mt-4 text-center text-red-500">Error: {error}</p>}
+              <p className="mt-4 text-center font-semibold">{status}</p>
             </>
           )}
         </div>
-
-        <Link href="/" className={styles.backButton}>
-          Back to Home
-        </Link>
-      </main>
+      </div>
     </div>
   );
-};
-
-export default MultiSig;
+}
