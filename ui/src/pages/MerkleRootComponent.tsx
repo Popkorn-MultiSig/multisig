@@ -19,11 +19,11 @@ export default function MerkleRootComponent({
   setSignersCount 
 }: MerkleRootComponentProps) {
   const [customAddress, setCustomAddress] = useState('');
+  const [addresses, setAddresses] = useState<string[]>([...predefinedAddresses]);
   const [selectedAddresses, setSelectedAddresses] = useState<Set<string>>(new Set());
   const [errorMsg, setErrorMsg] = useState('');
   const [merkleMap, setMerkleMap] = useState<MerkleMap | null>(null);
 
-  // Initialize MerkleMap and handle cleanup
   useEffect(() => {
     const map = new MerkleMap();
     setMerkleMap(map);
@@ -50,11 +50,10 @@ export default function MerkleRootComponent({
     setSelectedAddresses(prev => {
       const newAddresses = new Set(prev);
       if (newAddresses.has(address)) {
-        setErrorMsg('Address already selected');
-        return prev;
+        newAddresses.delete(address);
+      } else {
+        newAddresses.add(address);
       }
-      newAddresses.add(address);
-      setErrorMsg('');
       return newAddresses;
     });
   };
@@ -70,47 +69,15 @@ export default function MerkleRootComponent({
       return;
     }
 
-    handleAddressSelect(customAddress);
-    setCustomAddress('');
-  };
+    if (addresses.includes(customAddress)) {
+      setErrorMsg('Address already in the list');
+      return;
+    }
 
-// In the handleComputeRoot function:
-const handleComputeRoot = () => {
-    if (!merkleMap) {
-      setErrorMsg('MerkleMap not initialized');
-      return;
-    }
-  
-    if (selectedAddresses.size === 0) {
-      setErrorMsg('Please select at least one signer');
-      return;
-    }
-  
-    try {
-      // Create a new map for fresh computation
-      const newMerkleMap = new MerkleMap();
-  
-      Array.from(selectedAddresses).forEach(address => {
-        try {
-          const pubKey = PublicKey.fromBase58(address);
-          const fieldKey = pubKey.toFields()[0];
-          newMerkleMap.set(fieldKey, Field(1));
-        } catch (err) {
-          throw new Error(`Failed to process address ${address}: ${err}`);
-        }
-      });
-  
-      const root = newMerkleMap.getRoot();
-      setSignersMapRoot(root.toString());
-      setSignersCount(selectedAddresses.size.toString());
-      setErrorMsg('');
-      
-      // Update the merkle map state
-      setMerkleMap(newMerkleMap);
-    } catch (err) {
-      console.error('Computation error:', err);
-      setErrorMsg('Failed to compute Merkle root: ' + (err instanceof Error ? err.message : String(err)));
-    }
+    setAddresses(prev => [...prev, customAddress]);
+    setSelectedAddresses(prev => new Set(prev).add(customAddress));
+    setCustomAddress('');
+    setErrorMsg('');
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -119,31 +86,54 @@ const handleComputeRoot = () => {
     }
   };
 
-  const removeAddress = (addressToRemove: string) => {
-    setSelectedAddresses(prev => {
-      const newAddresses = new Set(prev);
-      newAddresses.delete(addressToRemove);
-      return newAddresses;
-    });
-  };
+  useEffect(() => {
+    if (!merkleMap) {
+      setErrorMsg('MerkleMap not initialized');
+      return;
+    }
+
+    if (selectedAddresses.size === 0) {
+      setErrorMsg('Please select at least one signer');
+      return;
+    }
+
+    try {
+      const newMerkleMap = new MerkleMap();
+
+      Array.from(selectedAddresses).forEach(address => {
+        const pubKey = PublicKey.fromBase58(address);
+        const fieldKey = pubKey.toFields()[0];
+        newMerkleMap.set(fieldKey, Field(1));
+      });
+
+      const root = newMerkleMap.getRoot();
+      setSignersMapRoot(root.toString());
+      setSignersCount(selectedAddresses.size.toString());
+      setErrorMsg('');
+      
+      setMerkleMap(newMerkleMap);
+    } catch (err) {
+      console.error('Computation error:', err);
+      setErrorMsg('Failed to compute Merkle root: ' + (err instanceof Error ? err.message : String(err)));
+    }
+  }, [selectedAddresses, merkleMap, setSignersMapRoot, setSignersCount]);
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
       <div className="mb-6">
-        <h2 className="text-2xl font-semibold mb-4">Select Predefined Signer Addresses</h2>
+        <h2 className="text-2xl font-semibold mb-4">Signer Addresses</h2>
         <ul className="space-y-2">
-          {predefinedAddresses.map((address) => (
+          {addresses.map((address) => (
             <li key={address} className="flex justify-between items-center bg-gray-100 p-2 rounded">
               <span className="text-sm font-mono text-gray-600 truncate">
                 {address}
               </span>
               <button 
                 onClick={() => handleAddressSelect(address)}
-                disabled={selectedAddresses.has(address)}
                 className={`px-3 py-1 rounded text-white ${
                   selectedAddresses.has(address) 
-                    ? 'bg-gray-400 cursor-not-allowed' 
-                    : 'bg-green-500 hover:bg-green-600'
+                    ? 'bg-green-500 hover:bg-green-600' 
+                    : 'bg-blue-500 hover:bg-blue-600'
                 }`}
               >
                 {selectedAddresses.has(address) ? 'Selected' : 'Select'}
@@ -180,39 +170,6 @@ const handleComputeRoot = () => {
           <p className="text-red-500 mt-2 text-sm">{errorMsg}</p>
         )}
       </div>
-
-      <div className="mb-6">
-        <h2 className="text-2xl font-semibold mb-4">
-          Selected Signers ({selectedAddresses.size})
-        </h2>
-        <ul className="space-y-2">
-          {Array.from(selectedAddresses).map((address) => (
-            <li key={address} className="flex justify-between items-center bg-gray-200 p-2 rounded">
-              <span className="text-sm font-mono text-gray-700 truncate">
-                {address}
-              </span>
-              <button
-                onClick={() => removeAddress(address)}
-                className="ml-2 text-red-500 hover:text-red-700"
-              >
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <button 
-        onClick={handleComputeRoot}
-        disabled={selectedAddresses.size === 0}
-        className={`w-full px-4 py-2 rounded text-white ${
-          selectedAddresses.size === 0
-            ? 'bg-gray-400 cursor-not-allowed'
-            : 'bg-purple-500 hover:bg-purple-600'
-        }`}
-      >
-        Compute Signers Map Root
-      </button>
     </div>
   );
 }

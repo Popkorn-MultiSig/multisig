@@ -24,7 +24,7 @@ export default function Home() {
 
   const [signersMapRoot, setSignersMapRoot] = useState('');
   const [signersCount, setSignersCount] = useState('');
-  const [threshold, setThreshold] = useState('');
+  const [threshold, setThreshold] = useState('1');
   const [newSignerPubKey, setNewSignerPubKey] = useState('');
   const [removeSignerPubKey, setRemoveSignerPubKey] = useState('');
   const [newThreshold, setNewThreshold] = useState('');
@@ -44,13 +44,14 @@ export default function Home() {
 
   useEffect(() => {
     if (isConnected) {
-      setStatus('Wallet connected. Ready to interact with the contract.');
+      setStatus('');
     } else {
       setStatus('Please connect your wallet to continue.');
     }
   }, [isConnected]);
 
   const handleSetupMultisig = async () => {
+    console.log("signersCount", signersCount);
     if (!isConnected || !signersMap) {
       setStatus('Please connect your wallet and wait for initialization.');
       return;
@@ -111,9 +112,8 @@ export default function Home() {
     }
     try {
       setStatus('Setting new threshold...');
-      const txHash = await contractSetThreshold(UInt64.from(newThreshold));
+      const txHash = await contractSetThreshold(UInt64.from(threshold));
       setStatus(`Threshold updated successfully! Transaction hash: ${txHash}`);
-      setNewThreshold('');
     } catch (err) {
       setStatus(`Failed to set threshold: ${(err as Error).message}`);
     }
@@ -170,7 +170,7 @@ export default function Home() {
     <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
       <div className="relative py-3 sm:max-w-xl sm:mx-auto">
         <div className="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
-          <h1 className="text-2xl font-semibold mb-5">Popkorn3 Multisig Wallet</h1>
+          <h1 className="text-2xl font-semibold mb-5">Create Multisig Wallet</h1>
           
           {!isConnected ? (
             <button onClick={connectWallet} className="w-full bg-blue-500 text-white px-4 py-2 rounded">
@@ -178,104 +178,28 @@ export default function Home() {
             </button>
           ) : (
             <>
-              <p className="mb-4">Connected Account: {account}</p>
-              <button onClick={disconnectWallet} className="w-full bg-red-500 text-white px-4 py-2 rounded mb-4">
-                Disconnect Wallet
-              </button>
+                <div>
+                  <h2 className="text-xl font-semibold mb-2">Setup Multisig</h2>
 
               <div className="space-y-4">
                 <MerkleRootComponent
                   setSignersMapRoot={setSignersMapRoot}
                   setSignersCount={setSignersCount}
                 />
-                <div>
-                  <h2 className="text-xl font-semibold mb-2">Setup Multisig</h2>
+                  <label htmlFor="thresholdSlider" className="block text-sm font-medium text-gray-700">
+                    Threshold: <strong>{threshold}</strong> / {signersCount ? signersCount : "0"}
+                  </label>
                   <input
-                    type="text"
-                    placeholder="Signers Map Root"
-                    value={signersMapRoot}
-                    onChange={(e) => setSignersMapRoot(e.target.value)}
-                    className="w-full px-3 py-2 border rounded"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Signers Count"
-                    value={signersCount}
-                    onChange={(e) => setSignersCount(e.target.value)}
-                    className="w-full px-3 py-2 border rounded mt-2"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Threshold"
+                    id="thresholdSlider"
+                    type="range"
+                    min="1"
+                    max={signersCount || "1"}
                     value={threshold}
                     onChange={(e) => setThreshold(e.target.value)}
-                    className="w-full px-3 py-2 border rounded mt-2"
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
                   />
                   <button onClick={handleSetupMultisig} className="w-full bg-green-500 text-white px-4 py-2 rounded mt-2">
                     Setup Multisig
-                  </button>
-                </div>
-
-                <div>
-                  <h2 className="text-xl font-semibold mb-2">Add Signer</h2>
-                  <input
-                    type="text"
-                    placeholder="New Signer Public Key"
-                    value={newSignerPubKey}
-                    onChange={(e) => setNewSignerPubKey(e.target.value)}
-                    className="w-full px-3 py-2 border rounded"
-                  />
-                  <button onClick={handleAddSigner} className="w-full bg-blue-500 text-white px-4 py-2 rounded mt-2">
-                    Add Signer
-                  </button>
-                </div>
-
-                <div>
-                  <h2 className="text-xl font-semibold mb-2">Remove Signer</h2>
-                  <input
-                    type="text"
-                    placeholder="Remove Signer Public Key"
-                    value={removeSignerPubKey}
-                    onChange={(e) => setRemoveSignerPubKey(e.target.value)}
-                    className="w-full px-3 py-2 border rounded"
-                  />
-                  <button onClick={handleRemoveSigner} className="w-full bg-red-500 text-white px-4 py-2 rounded mt-2">
-                    Remove Signer
-                  </button>
-                </div>
-
-                <div>
-                  <h2 className="text-xl font-semibold mb-2">Set Threshold</h2>
-                  <input
-                    type="number"
-                    placeholder="New Threshold"
-                    value={newThreshold}
-                    onChange={(e) => setNewThreshold(e.target.value)}
-                    className="w-full px-3 py-2 border rounded"
-                  />
-                  <button onClick={handleSetThreshold} className="w-full bg-yellow-500 text-white px-4 py-2 rounded mt-2">
-                    Set Threshold
-                  </button>
-                </div>
-
-                <div>
-                  <h2 className="text-xl font-semibold mb-2">Sign Transaction</h2>
-                  <input
-                    type="number"
-                    placeholder="Transaction Amount"
-                    value={transactionAmount}
-                    onChange={(e) => setTransactionAmount(e.target.value)}
-                    className="w-full px-3 py-2 border rounded"
-                  />
-                  <button onClick={handleSign} className="w-full bg-purple-500 text-white px-4 py-2 rounded mt-2">
-                    Sign Transaction
-                  </button>
-                </div>
-
-                <div>
-                  <h2 className="text-xl font-semibold mb-2">Execute Transaction</h2>
-                  <button onClick={handleExecuteTransaction} className="w-full bg-indigo-500 text-white px-4 py-2 rounded">
-                    Execute Transaction
                   </button>
                 </div>
               </div>
