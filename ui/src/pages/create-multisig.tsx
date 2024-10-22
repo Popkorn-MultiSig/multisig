@@ -3,6 +3,7 @@ import { PublicKey, UInt64, Field, MerkleMap, Int64, Signature, Poseidon } from 
 import { useMinaWallet } from '../hooks/useMinaWallet';
 import { usePopkorn3Contract } from '../hooks/usePopkorn';
 import { AccountUpdateDescr } from '../../../contracts/build/src/Popkorn3';
+import MerkleRootComponent from './MerkleRootComponent';
 
 declare const window: Window & { mina: any };
 
@@ -35,7 +36,7 @@ export default function Home() {
 
   useEffect(() => {
     (async () => {
-      await import('o1js');
+      const { MerkleMap } = await import('o1js');
       setO1jsLoaded(true);
       setSignersMap(new MerkleMap());
     })();
@@ -183,6 +184,10 @@ export default function Home() {
               </button>
 
               <div className="space-y-4">
+                <MerkleRootComponent
+                  setSignersMapRoot={setSignersMapRoot}
+                  setSignersCount={setSignersCount}
+                />
                 <div>
                   <h2 className="text-xl font-semibold mb-2">Setup Multisig</h2>
                   <input
