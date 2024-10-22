@@ -25,11 +25,7 @@ export default function Home() {
   const [signersMapRoot, setSignersMapRoot] = useState('');
   const [signersCount, setSignersCount] = useState('');
   const [threshold, setThreshold] = useState('1');
-  const [newSignerPubKey, setNewSignerPubKey] = useState('');
-  const [removeSignerPubKey, setRemoveSignerPubKey] = useState('');
-  const [newThreshold, setNewThreshold] = useState('');
-  const [transactionAmount, setTransactionAmount] = useState('');
-  const [status, setStatus] = useState('');
+    const [status, setStatus] = useState('');
   
   const [signersMap, setSignersMap] = useState<MerkleMap | null>(null);
   const [o1jsLoaded, setO1jsLoaded] = useState(false);
@@ -66,101 +62,6 @@ export default function Home() {
       setStatus(`Multisig setup successful! Transaction hash: ${txHash}`);
     } catch (err) {
       setStatus(`Failed to setup multisig: ${(err as Error).message}`);
-    }
-  };
-
-  const handleAddSigner = async () => {
-    if (!isConnected || !signersMap) {
-      setStatus('Please connect your wallet and wait for initialization.');
-      return;
-    }
-    try {
-      setStatus('Adding signer...');
-      const signerPubKey = PublicKey.fromBase58(newSignerPubKey);
-      const witness = signersMap.getWitness(signerPubKey.toFields()[0]);
-      const txHash = await addSigner(signerPubKey, witness);
-      signersMap.set(signerPubKey.toFields()[0], Field(1));
-      setStatus(`Signer added successfully! Transaction hash: ${txHash}`);
-      setNewSignerPubKey('');
-    } catch (err) {
-      setStatus(`Failed to add signer: ${(err as Error).message}`);
-    }
-  };
-
-  const handleRemoveSigner = async () => {
-    if (!isConnected || !signersMap) {
-      setStatus('Please connect your wallet and wait for initialization.');
-      return;
-    }
-    try {
-      setStatus('Removing signer...');
-      const signerPubKey = PublicKey.fromBase58(removeSignerPubKey);
-      const witness = signersMap.getWitness(signerPubKey.toFields()[0]);
-      const txHash = await removeSigner(signerPubKey, witness);
-      signersMap.set(signerPubKey.toFields()[0], Field(0));
-      setStatus(`Signer removed successfully! Transaction hash: ${txHash}`);
-      setRemoveSignerPubKey('');
-    } catch (err) {
-      setStatus(`Failed to remove signer: ${(err as Error).message}`);
-    }
-  };
-
-  const handleSetThreshold = async () => {
-    if (!isConnected) {
-      setStatus('Please connect your wallet first.');
-      return;
-    }
-    try {
-      setStatus('Setting new threshold...');
-      const txHash = await contractSetThreshold(UInt64.from(threshold));
-      setStatus(`Threshold updated successfully! Transaction hash: ${txHash}`);
-    } catch (err) {
-      setStatus(`Failed to set threshold: ${(err as Error).message}`);
-    }
-  };
-
-  const handleSign = async () => {
-    if (!isConnected || !signersMap || !account) {
-      setStatus('Please connect your wallet and wait for initialization.');
-      return;
-    }
-    try {
-      setStatus('Signing transaction...');
-      const accountUpdateDescr = new AccountUpdateDescr({ balanceChange: Int64.from(transactionAmount) });
-      
-      const messageToSign = Poseidon.hash(
-        accountUpdateDescr.balanceChange.toFields()
-      ).toString();
-  
-      const signature = await window.mina.signMessage({
-        message: messageToSign,
-      });
-  
-      const o1jsSignature = Signature.fromJSON(signature);
-  
-      const signerPubKey = PublicKey.fromBase58(account);
-      const witness = signersMap.getWitness(signerPubKey.toFields()[0]);
-      
-      const txHash = await sign(accountUpdateDescr, o1jsSignature, signerPubKey, witness);
-      setStatus(`Transaction signed successfully! Transaction hash: ${txHash}`);
-    } catch (err) {
-      setStatus(`Failed to sign transaction: ${(err as Error).message}`);
-    }
-  };
-
-  const handleExecuteTransaction = async () => {
-    if (!isConnected) {
-      setStatus('Please connect your wallet first.');
-      return;
-    }
-    try {
-      setStatus('Executing transaction...');
-      const accountUpdateDescr = new AccountUpdateDescr({ balanceChange: Int64.from(transactionAmount) });
-      const txHash = await executeTransaction(accountUpdateDescr);
-      setStatus(`Transaction executed successfully! Transaction hash: ${txHash}`);
-      setTransactionAmount('');
-    } catch (err) {
-      setStatus(`Failed to execute transaction: ${(err as Error).message}`);
     }
   };
 
