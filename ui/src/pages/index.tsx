@@ -75,7 +75,7 @@ export default function Home() {
             </Link>
             <Link href="/overview" className={styles.card}>
               <h2>
-                <span>Create</span>
+                <span>Overview</span>
                 <div>
                   <Image
                     src={arrowRightSmall}
@@ -88,7 +88,7 @@ export default function Home() {
               </h2>
               <p>View and manage your MultiSig wallets</p>
             </Link>
-            <Link href="/details" className={styles.card}>
+            {/* <Link href="/details" className={styles.card}>
               <h2>
                 <span>Details</span>
                 <div>
@@ -102,10 +102,10 @@ export default function Home() {
                 </div>
               </h2>
               <p>View details of a specific MultiSig wallet</p>
-            </Link>
+            </Link> */}
             <Link href="/about" className={styles.card}>
               <h2>
-                <span>About</span>
+                <span>FAQ</span>
                 <div>
                   <Image
                     src={arrowRightSmall}
@@ -116,7 +116,7 @@ export default function Home() {
                   />
                 </div>
               </h2>
-              <p>Check me out</p>
+              <p>What is POPKORN?</p>
             </Link>
           </div>
         </main>
