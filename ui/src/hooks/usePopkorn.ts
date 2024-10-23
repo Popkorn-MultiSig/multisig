@@ -8,12 +8,11 @@ import {
   Signature,
   Int64,
   fetchAccount,
+  Bool,
 } from 'o1js';
 import { Popkorn3, AccountUpdateDescr } from '../../../contracts/build/src/Popkorn3';
 
 declare const window: Window & { mina: any };
-
-
 
 export const usePopkorn3Contract = (zkAppAddress: string) => {
   const [zkApp, setZkApp] = useState<Popkorn3 | null>(null);
@@ -112,6 +111,27 @@ export const usePopkorn3Contract = (zkAppAddress: string) => {
     return sendTransaction(() => zkApp.executeTransaction(rootUpdate));
   }, [zkApp, sendTransaction]);
 
+  const getContractState = useCallback(async () => {
+    if (!zkApp) throw new Error('Contract not initialized');
+    const signersMapRoot = await zkApp.signersMapRoot.get();
+    const signersCount = await zkApp.signersCount.get();
+    const signedAmount = await zkApp.signedAmount.get();
+    const threshold = await zkApp.threshold.get();
+    const nonce = await zkApp.nonce.get();
+    const isInitialized = await zkApp.isInitialized.get();
+    const pendingTransactionHash = await zkApp.pendingTransactionHash.get();
+
+    return {
+      signersMapRoot,
+      signersCount,
+      signedAmount,
+      threshold,
+      nonce,
+      isInitialized,
+      pendingTransactionHash,
+    };
+  }, [zkApp]);
+
   return {
     isLoading,
     error,
@@ -121,5 +141,6 @@ export const usePopkorn3Contract = (zkAppAddress: string) => {
     setThreshold,
     sign,
     executeTransaction,
+    getContractState,
   };
 };

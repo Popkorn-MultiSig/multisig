@@ -7,7 +7,7 @@ import MerkleRootComponent from './MerkleRootComponent';
 
 declare const window: Window & { mina: any };
 
-const ZKAPP_ADDRESS = 'B62qpE6LNNhE8rT7mQLq75APVKyjagzX4UBvKRs9NpmgoqJUrAWUP2n';
+const ZKAPP_ADDRESS = 'B62qnsHGVW6dMndUfuHgjhimuPoS15hma2rhhJDrP3VxsE3hQjobeED';
 
 export default function Home() {
   const { account, isConnected, connectWallet, disconnectWallet } = useMinaWallet();
@@ -47,13 +47,15 @@ export default function Home() {
   }, [isConnected]);
 
   const handleSetupMultisig = async () => {
-    console.log("signersCount", signersCount);
-    if (!isConnected || !signersMap) {
+     if (!isConnected || !signersMap) {
       setStatus('Please connect your wallet and wait for initialization.');
       return;
     }
     try {
       setStatus('Setting up multisig...');
+      console.log("signersMapRoot", signersMapRoot);
+      console.log("signersCount", signersCount);
+      console.log("threshold", threshold);  
       const txHash = await setupMultisig(
         Field(signersMapRoot),
         UInt64.from(signersCount),

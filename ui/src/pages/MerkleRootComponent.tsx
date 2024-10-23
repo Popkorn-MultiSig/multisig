@@ -91,33 +91,35 @@ export default function MerkleRootComponent({
       setErrorMsg('MerkleMap not initialized');
       return;
     }
-
+  
     if (selectedAddresses.size === 0) {
       setErrorMsg('Please select at least one signer');
       return;
     }
-
+  
     try {
       const newMerkleMap = new MerkleMap();
-
+  
       Array.from(selectedAddresses).forEach(address => {
         const pubKey = PublicKey.fromBase58(address);
         const fieldKey = pubKey.toFields()[0];
         newMerkleMap.set(fieldKey, Field(1));
       });
-
+  
       const root = newMerkleMap.getRoot();
       setSignersMapRoot(root.toString());
       setSignersCount(selectedAddresses.size.toString());
       setErrorMsg('');
       
-      setMerkleMap(newMerkleMap);
+      // Remove this line to prevent infinite loop
+      // setMerkleMap(newMerkleMap);
     } catch (err) {
       console.error('Computation error:', err);
       setErrorMsg('Failed to compute Merkle root: ' + (err instanceof Error ? err.message : String(err)));
     }
-  }, [selectedAddresses, merkleMap, setSignersMapRoot, setSignersCount]);
-
+  }, [selectedAddresses, setSignersMapRoot, setSignersCount]); // Removed merkleMap from dependencies
+  
+  
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
       <div className="mb-6">

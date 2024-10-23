@@ -14,6 +14,7 @@ import {
   Poseidon,
   Signature,
   Bool,
+  Provable,
 } from 'o1js';
 
 export class AccountUpdateDescr extends Struct({
@@ -49,9 +50,12 @@ export class Popkorn3 extends SmartContract {
     signersCount: UInt64,
     threshold: UInt64
   ) {
-    const initialized = await this.isInitialized.get();
-    this.isInitialized.requireEquals(initialized);
-    initialized.assertFalse();
+    let initialized;
+    Provable.asProver(() => {
+      initialized = this.isInitialized.get();
+      this.isInitialized.requireEquals(initialized);
+      initialized.assertFalse();
+    });
 
     threshold.assertGreaterThan(UInt64.from(0));
     threshold.assertLessThanOrEqual(signersCount);

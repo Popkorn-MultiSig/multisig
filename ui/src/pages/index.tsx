@@ -73,9 +73,9 @@ export default function Home() {
               </h2>
               <p>Create a new MultiSig wallet</p>
             </Link>
-            <Link href="/overview" className={styles.card}>
+            <Link href="/details" className={styles.card}>
               <h2>
-                <span>Overview</span>
+                <span>Manage</span>
                 <div>
                   <Image
                     src={arrowRightSmall}
@@ -86,7 +86,7 @@ export default function Home() {
                   />
                 </div>
               </h2>
-              <p>View and manage your MultiSig wallets</p>
+              <p>View and manage your MultiSig wallet</p>
             </Link>
             {/* <Link href="/details" className={styles.card}>
               <h2>
