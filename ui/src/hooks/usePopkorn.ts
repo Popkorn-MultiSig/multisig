@@ -8,93 +8,247 @@ import {
   Signature,
   Int64,
   fetchAccount,
-  Bool,
 } from 'o1js';
 import { Popkorn3, AccountUpdateDescr } from '../../../contracts/build/src/Popkorn3';
 
 declare const window: Window & { mina: any };
 
+const DEPLOYMENT_FEE = 1; // 1 MINA
+const TRANSACTION_FEE = 0.1; // 0.1 MINA
+
 export const usePopkorn3Contract = (zkAppAddress: string) => {
   const [zkApp, setZkApp] = useState<Popkorn3 | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDeployed, setIsDeployed] = useState<boolean>(false);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
+  // Check if contract is deployed
+  const checkDeploymentStatus = useCallback(async () => {
+    try {
+      await fetchAccount({ publicKey: PublicKey.fromBase58(zkAppAddress) });
+      const account = Mina.getAccount(PublicKey.fromBase58(zkAppAddress));
+      return !!account;
+    } catch {
+      return false;
+    }
+  }, [zkAppAddress]);
+
+  // Initialize contract
   useEffect(() => {
     (async () => {
       try {
+        // Setup network
         const Devnet = Mina.Network('https://proxy.devnet.minaexplorer.com/graphql');
         Mina.setActiveInstance(Devnet);
         console.log('Network set to Devnet');
-  
-        console.log('Starting contract compilation...');
+
+        // First compile
+        console.log('Compiling contract...');
         await Popkorn3.compile();
-        console.log('Contract compiled successfully');
-  
+        console.log('Contract compiled');
+
+        // Check deployment status
+        const deployed = await checkDeploymentStatus();
+        setIsDeployed(deployed);
+        console.log('Contract deployed:', deployed);
+
+        if (!deployed) {
+          console.log('Contract not deployed to this address');
+          return;
+        }
+
+        // Create instance
         const zkAppPublicKey = PublicKey.fromBase58(zkAppAddress);
-        console.log('Fetching account:', zkAppAddress);
-        await fetchAccount({ publicKey: zkAppPublicKey });
-        console.log('Account fetched successfully');
-  
         const zkAppInstance = new Popkorn3(zkAppPublicKey);
         setZkApp(zkAppInstance);
         console.log('zkApp instance created');
+
+        // Check initialization
+        const state = await zkAppInstance.isInitialized.get();
+        setIsInitialized(state.toBoolean());
+        console.log('Contract initialized:', state.toBoolean());
+
       } catch (err) {
-        setError('Failed to initialize contract: ' + (err as Error).message);
         console.error('Initialization error:', err);
+        setError(`Contract initialization failed: ${err instanceof Error ? err.message : String(err)}`);
       }
     })();
-  }, [zkAppAddress]);
+  }, [zkAppAddress, checkDeploymentStatus]);
 
-  useEffect(() => {
-    (async () => {
+  const refreshContractState = useCallback(async () => {
+    if (!zkApp) return;
+    try {
       await fetchAccount({ publicKey: PublicKey.fromBase58(zkAppAddress) });
-    })();
-  }, [zkAppAddress]);
+      const state = await zkApp.isInitialized.get();
+      setIsInitialized(state.toBoolean());
+    } catch (err) {
+      console.error('Failed to refresh state:', err);
+    }
+  }, [zkApp, zkAppAddress]);
 
-  const sendTransaction = useCallback(async (txFunction: () => Promise<void>) => {
+  const sendTransaction = useCallback(async (
+    txFunction: () => Promise<void>
+  ): Promise<string> => {
+    if (!zkApp) throw new Error('Contract not initialized');
+    if (!isDeployed) throw new Error('Contract not deployed');
+
     setIsLoading(true);
     setError(null);
+    
     try {
-      const tx = await Mina.transaction(() => txFunction());
-      await tx.prove();
+      // Verify wallet connection
+      const accounts = await window.mina.requestAccounts();
+      if (!accounts || accounts.length === 0) {
+        throw new Error('No wallet account found');
+      }
       
-      // Use the wallet to sign the transaction
+      const senderPublicKey = PublicKey.fromBase58(accounts[0]);
+      console.log('Sender:', senderPublicKey.toBase58());
+
+      // Refresh account data
+      await fetchAccount({ publicKey: PublicKey.fromBase58(zkAppAddress) });
+
+      // Create transaction
+      console.log('Creating transaction...');
+      const tx = await Mina.transaction({
+        sender: senderPublicKey,
+        fee: TRANSACTION_FEE * 1e9,
+        memo: 'Popkorn Multisig',
+      }, async () => {
+        try {
+          await txFunction();
+        } catch (err) {
+          console.error('Transaction function error:', err);
+          throw err;
+        }
+      });
+
+      // Generate proof
+      console.log('Generating proof...');
+      try {
+        await tx.prove();
+        console.log('Proof generated');
+      } catch (err) {
+        console.error('Proof generation error:', err);
+        throw new Error(`Proof generation failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
+
+      // Send transaction
+      console.log('Sending transaction...');
       const { hash } = await window.mina.sendTransaction({
         transaction: tx.toJSON(),
         feePayer: {
-          fee: 0.1,
-          memo: '',
+          fee: TRANSACTION_FEE,
+          memo: 'Popkorn Multisig',
         },
       });
-      
+
+      console.log('Transaction sent:', hash);
+
+      // Wait for confirmation and refresh state
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      await refreshContractState();
+
       return hash;
-    } catch (err) {
-      setError((err as Error).message);
-      throw err;
+
+    } catch (err: any) {
+      console.error('Transaction error:', err);
+      if (err.code === 1002) {
+        throw new Error('Transaction rejected by user');
+      }
+      if (err.code === 1001) {
+        throw new Error('Insufficient balance');
+      }
+      throw new Error(err.message || 'Transaction failed');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [zkApp, zkAppAddress, isDeployed, refreshContractState]);
 
-  const setupMultisig = useCallback(async (signersMapRoot: Field, signersCount: UInt64, threshold: UInt64) => {
+  const getContractState = useCallback(async () => {
     if (!zkApp) throw new Error('Contract not initialized');
-    return sendTransaction(() => zkApp.setupMultisig(signersMapRoot, signersCount, threshold));
-  }, [zkApp, sendTransaction]);
+    if (!isDeployed) throw new Error('Contract not deployed');
+    
+    try {
+      await fetchAccount({ publicKey: PublicKey.fromBase58(zkAppAddress) });
+      
+      return {
+        isInitialized: await zkApp.isInitialized.get(),
+        signersMapRoot: await zkApp.signersMapRoot.get(),
+        signersCount: await zkApp.signersCount.get(),
+        signedAmount: await zkApp.signedAmount.get(),
+        threshold: await zkApp.threshold.get(),
+        nonce: await zkApp.nonce.get(),
+        pendingTransactionHash: await zkApp.pendingTransactionHash.get(),
+      };
+    } catch (err) {
+      console.error('Failed to fetch state:', err);
+      throw err;
+    }
+  }, [zkApp, zkAppAddress, isDeployed]);
 
-  const addSigner = useCallback(async (signerPubKey: PublicKey, witness: MerkleMapWitness) => {
+  const setupMultisig = useCallback(async (
+    signersMapRoot: Field, 
+    signersCount: UInt64,
+    threshold: UInt64
+  ) => {
     if (!zkApp) throw new Error('Contract not initialized');
-    return sendTransaction(() => zkApp.addSigner(signerPubKey, witness));
-  }, [zkApp, sendTransaction]);
+    if (!isDeployed) throw new Error('Contract not deployed');
+    if (isInitialized) throw new Error('Contract already initialized');
+    
+    try {
+      // Verify inputs
+      if (threshold.toBigInt() > signersCount.toBigInt()) {
+        throw new Error('Threshold cannot be greater than signer count');
+      }
+      if (threshold.toBigInt() <= 0n) {
+        throw new Error('Threshold must be greater than 0');
+      }
 
-  const removeSigner = useCallback(async (signerPubKey: PublicKey, witness: MerkleMapWitness) => {
-    if (!zkApp) throw new Error('Contract not initialized');
-    return sendTransaction(() => zkApp.removeSigner(signerPubKey, witness));
-  }, [zkApp, sendTransaction]);
+      console.log('Setting up multisig with params:', {
+        signersMapRoot: signersMapRoot.toString(),
+        signersCount: signersCount.toString(),
+        threshold: threshold.toString()
+      });
+
+      const hash = await sendTransaction(async () => {
+        await zkApp.setupMultisig(signersMapRoot, signersCount, threshold);
+      });
+
+      return hash;
+    } catch (err) {
+      console.error('Setup failed:', err);
+      throw err;
+    }
+  }, [zkApp, isDeployed, isInitialized, sendTransaction]);
+
+  const addSigner = useCallback(async (
+    signerPubKey: PublicKey,
+    witness: MerkleMapWitness
+  ) => {
+    if (!zkApp || !isDeployed) throw new Error('Contract not initialized');
+    return sendTransaction(async () => {
+      await zkApp.addSigner(signerPubKey, witness);
+    });
+  }, [zkApp, isDeployed, sendTransaction]);
+
+  const removeSigner = useCallback(async (
+    signerPubKey: PublicKey,
+    witness: MerkleMapWitness
+  ) => {
+    if (!zkApp || !isDeployed) throw new Error('Contract not initialized');
+    return sendTransaction(async () => {
+      await zkApp.removeSigner(signerPubKey, witness);
+    });
+  }, [zkApp, isDeployed, sendTransaction]);
 
   const setThreshold = useCallback(async (newThreshold: UInt64) => {
-    if (!zkApp) throw new Error('Contract not initialized');
-    return sendTransaction(() => zkApp.setThreshold(newThreshold));
-  }, [zkApp, sendTransaction]);
+    if (!zkApp || !isDeployed) throw new Error('Contract not initialized');
+    return sendTransaction(async () => {
+      await zkApp.setThreshold(newThreshold);
+    });
+  }, [zkApp, isDeployed, sendTransaction]);
 
   const sign = useCallback(async (
     rootUpdate: AccountUpdateDescr,
@@ -102,39 +256,32 @@ export const usePopkorn3Contract = (zkAppAddress: string) => {
     signerPubKey: PublicKey,
     witness: MerkleMapWitness
   ) => {
-    if (!zkApp) throw new Error('Contract not initialized');
-    return sendTransaction(() => zkApp.sign(rootUpdate, signature, signerPubKey, witness));
-  }, [zkApp, sendTransaction]);
+    if (!zkApp || !isDeployed) throw new Error('Contract not initialized');
+    return sendTransaction(async () => {
+      await zkApp.sign(rootUpdate, signature, signerPubKey, witness);
+    });
+  }, [zkApp, isDeployed, sendTransaction]);
 
   const executeTransaction = useCallback(async (rootUpdate: AccountUpdateDescr) => {
-    if (!zkApp) throw new Error('Contract not initialized');
-    return sendTransaction(() => zkApp.executeTransaction(rootUpdate));
-  }, [zkApp, sendTransaction]);
+    if (!zkApp || !isDeployed) throw new Error('Contract not initialized');
+    return sendTransaction(async () => {
+      await zkApp.executeTransaction(rootUpdate);
+    });
+  }, [zkApp, isDeployed, sendTransaction]);
 
-  const getContractState = useCallback(async () => {
-    if (!zkApp) throw new Error('Contract not initialized');
-    const signersMapRoot = await zkApp.signersMapRoot.get();
-    const signersCount = await zkApp.signersCount.get();
-    const signedAmount = await zkApp.signedAmount.get();
-    const threshold = await zkApp.threshold.get();
-    const nonce = await zkApp.nonce.get();
-    const isInitialized = await zkApp.isInitialized.get();
-    const pendingTransactionHash = await zkApp.pendingTransactionHash.get();
-
-    return {
-      signersMapRoot,
-      signersCount,
-      signedAmount,
-      threshold,
-      nonce,
-      isInitialized,
-      pendingTransactionHash,
-    };
-  }, [zkApp]);
+  // Auto refresh state
+  useEffect(() => {
+    if (!zkApp || !isDeployed) return;
+    
+    const interval = setInterval(refreshContractState, 30000);
+    return () => clearInterval(interval);
+  }, [zkApp, isDeployed, refreshContractState]);
 
   return {
     isLoading,
     error,
+    isDeployed,
+    isInitialized,
     setupMultisig,
     addSigner,
     removeSigner,
@@ -142,5 +289,7 @@ export const usePopkorn3Contract = (zkAppAddress: string) => {
     sign,
     executeTransaction,
     getContractState,
+    DEPLOYMENT_FEE,
+    TRANSACTION_FEE,
   };
 };
