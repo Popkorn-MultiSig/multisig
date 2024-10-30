@@ -9,15 +9,15 @@ import {
   Int64,
   fetchAccount,
 } from 'o1js';
-import { Popkorn3, AccountUpdateDescr } from '../../../contracts/build/src/Popkorn3';
+import { Popkorn, AccountUpdateDescr } from '../../../contracts/build/src/Popkorn';
 
 declare const window: Window & { mina: any };
 
 const DEPLOYMENT_FEE = 1; // 1 MINA
 const TRANSACTION_FEE = 0.1; // 0.1 MINA
 
-export const usePopkorn3Contract = (zkAppAddress: string) => {
-  const [zkApp, setZkApp] = useState<Popkorn3 | null>(null);
+export const usePopkornContract = (zkAppAddress: string) => {
+  const [zkApp, setZkApp] = useState<Popkorn | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDeployed, setIsDeployed] = useState<boolean>(false);
@@ -45,7 +45,7 @@ export const usePopkorn3Contract = (zkAppAddress: string) => {
 
         // First compile
         console.log('Compiling contract...');
-        await Popkorn3.compile();
+        await Popkorn.compile();
         console.log('Contract compiled');
 
         // Check deployment status
@@ -60,7 +60,7 @@ export const usePopkorn3Contract = (zkAppAddress: string) => {
 
         // Create instance
         const zkAppPublicKey = PublicKey.fromBase58(zkAppAddress);
-        const zkAppInstance = new Popkorn3(zkAppPublicKey);
+        const zkAppInstance = new Popkorn(zkAppPublicKey);
         setZkApp(zkAppInstance);
         console.log('zkApp instance created');
 

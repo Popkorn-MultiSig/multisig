@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { PublicKey, UInt64, Field, MerkleMap, Int64, Signature, Poseidon } from 'o1js';
 import { useMinaWallet } from '../hooks/useMinaWallet';
-import { usePopkorn3Contract } from '../hooks/usePopkorn';
-import { AccountUpdateDescr } from '../../../contracts/build/src/Popkorn3';
+import { usePopkornContract } from '../hooks/usePopkorn';
+import { AccountUpdateDescr } from '../../../contracts/build/src/Popkorn';
 import MerkleRootComponent from './MerkleRootComponent';
 
 declare const window: Window & { mina: any };
@@ -22,7 +22,7 @@ export default function Home() {
     sign, 
     executeTransaction, 
     getContractState
-  } = usePopkorn3Contract(ZKAPP_ADDRESS);
+  } = usePopkornContract(ZKAPP_ADDRESS);
 
   const [newSignerPubKey, setNewSignerPubKey] = useState('');
   const [removeSignerPubKey, setRemoveSignerPubKey] = useState('');
@@ -170,7 +170,7 @@ export default function Home() {
     <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
       <div className="relative py-3 sm:max-w-xl sm:mx-auto">
         <div className="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
-          <h1 className="text-2xl font-semibold mb-5">Popkorn3 Multisig Wallet</h1>
+          <h1 className="text-2xl font-semibold mb-5">Popkorn Multisig Wallet</h1>
           
           {!isConnected ? (
             <button onClick={connectWallet} className="w-full bg-blue-500 text-white px-4 py-2 rounded">

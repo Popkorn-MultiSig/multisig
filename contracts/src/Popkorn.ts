@@ -25,7 +25,7 @@ export class AccountUpdateDescr extends Struct({
   }
 }
 
-export class Popkorn3 extends SmartContract {
+export class Popkorn extends SmartContract {
   @state(Field) signersMapRoot = State<Field>();
   @state(UInt64) signersCount = State<UInt64>();
   @state(UInt64) signedAmount = State<UInt64>();

@@ -1,7 +1,7 @@
 // ContractDebugger.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { fetchAccount, PublicKey } from 'o1js';
-import { Popkorn3 } from '../../../contracts/build/src/Popkorn3';
+import { Popkorn } from '../../../contracts/build/src/Popkorn';
 
 interface ContractState {
   isInitialized: boolean;
@@ -23,7 +23,7 @@ export function ContractDebugger({ zkAppAddress }: { zkAppAddress: string }) {
       setLoading(true);
       setError(null);
 
-      const zkApp = new Popkorn3(PublicKey.fromBase58(zkAppAddress));
+      const zkApp = new Popkorn(PublicKey.fromBase58(zkAppAddress));
       
       // Fetch all state values
       const state = {

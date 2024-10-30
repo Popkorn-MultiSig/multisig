@@ -1,18 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { PublicKey, UInt64, Field, MerkleMap } from 'o1js';
 import { useMinaWallet } from '../hooks/useMinaWallet';
-import { usePopkorn3Contract } from '../hooks/usePopkorn';
-import { AccountUpdateDescr } from '../../../contracts/build/src/Popkorn3';
+import { usePopkornContract } from '../hooks/usePopkorn';
+import { AccountUpdateDescr } from '../../../contracts/build/src/Popkorn';
 import MerkleRootComponent from './MerkleRootComponent';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { ContractDebugger } from './debug';
+import ZkappWorkerClient from './zkappWorkerClient';
 
 const ZKAPP_ADDRESS = 'B62qnsHGVW6dMndUfuHgjhimuPoS15hma2rhhJDrP3VxsE3hQjobeED';
 
 export default function CreateMultisig() {
+  const [zkappWorkerClient, setZkappWorkerClient] = useState<null | ZkappWorkerClient>(null);
   const { account, isConnected, connectWallet } = useMinaWallet();
   const { 
     isLoading, 
@@ -21,7 +23,7 @@ export default function CreateMultisig() {
     getContractState,
     DEPLOYMENT_FEE,
     TRANSACTION_FEE
-  } = usePopkorn3Contract(ZKAPP_ADDRESS);
+  } = usePopkornContract(ZKAPP_ADDRESS);
 
   const [signersMapRoot, setSignersMapRoot] = useState('');
   const [signersCount, setSignersCount] = useState('');
@@ -262,7 +264,6 @@ export default function CreateMultisig() {
             )}
           </CardContent>
         </Card>
-        <ContractDebugger zkAppAddress={ZKAPP_ADDRESS} />
       </div>
     </div>
   );
