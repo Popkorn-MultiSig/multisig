@@ -128,9 +128,9 @@ export default function CreateMultisig() {
         signersCount,
         threshold
       );
-
+      
       // Handle transaction submission here
-      setTxHash(txJSON); // Update to use the transaction JSON
+      setTxHash(txJSON.result.hash); // Update to use the transaction JSON
       setSetupStep(3);
       setStatus(`Multisig setup successful! Transaction hash: ${txJSON}`);
 

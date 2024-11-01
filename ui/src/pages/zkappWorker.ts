@@ -84,21 +84,18 @@ export const api = {
           UInt64.from(10),
           UInt64.from(10)
         );
-        console.log('done');
       });
 
       console.log('transaction', transaction);
 
       state.transaction = transaction;
+      // await transaction.sign([state.zkappInstance!.account]);
       await transaction.prove();
+      // const result = await transaction.send();
+      console.log('transaction done');
 
-      console.log('transaction', transaction);
-      
-      // Send the transaction
-      const result = await transaction.send(); // todo signature?
-      
       return {
-        hash: result,
+        // result: result,
         isSuccess: true
       };
     } catch (error) {
