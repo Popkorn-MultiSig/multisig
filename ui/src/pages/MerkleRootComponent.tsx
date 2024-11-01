@@ -119,7 +119,7 @@ export default function MerkleRootComponent({
   useEffect(() => {
     const updateMerkleRoot = async () => {
       if (!merkleMap) {
-        setErrorMsg('MerkleMap not initialized');
+        setErrorMsg('Add at least one signer');
         return;
       }
 

@@ -124,9 +124,9 @@ export default function CreateMultisig() {
       setStatus('Setting up multisig...');
 
       const txJSON = await zkappWorkerClient!.setupMultisig(
-        Field(signersMapRoot),
-        UInt64.from(signersCount),
-        UInt64.from(threshold)
+        signersMapRoot,
+        signersCount,
+        threshold
       );
 
       // Handle transaction submission here

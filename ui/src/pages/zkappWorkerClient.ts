@@ -35,9 +35,9 @@ export default class ZkappWorkerClient {
   }
 
   async setupMultisig(
-    signerMapRoot: Field, 
-    signersCount: UInt64, 
-    threshold: UInt64
+    signerMapRoot: string, 
+    signersCount: string, 
+    threshold: string
   ) {
     return this.remoteApi.setupMultisig(signerMapRoot, signersCount, threshold);
   }

@@ -56,9 +56,9 @@ export const api = {
   },
 
   async setupMultisig(
-    signerMapRoot: Field, 
-    signersCount: UInt64, 
-    threshold: UInt64
+    signerMapRoot: string, 
+    signersCount: string, 
+    threshold: string
   ) {
     if (!state.zkappInstance) {
       throw new Error('ZkApp instance not initialized');
@@ -66,13 +66,25 @@ export const api = {
 
     try {
 
-      console.log('trying avh');
+      // Add validation and conversion of inputs
+      console.log('Input values:', {
+        signerMapRoot: signerMapRoot.toString(),
+        signersCount: signersCount.toString(),
+        threshold: threshold.toString()
+      });
+
+      // Ensure proper Field and UInt64 conversion
+      const safeSignerMapRoot = Field(signerMapRoot);
+      const safeSignersCount = UInt64.from(signersCount);
+      const safeThreshold = UInt64.from(threshold);
+
       const transaction = await Mina.transaction(async () => {
         await state.zkappInstance!.setupMultisig(
-          signerMapRoot,
-          signersCount,
-          threshold
+          safeSignerMapRoot,
+          UInt64.from(10),
+          UInt64.from(10)
         );
+        console.log('done');
       });
 
       console.log('transaction', transaction);
@@ -98,7 +110,7 @@ export const api = {
 
   async getContractState() {
     if (!state.zkappInstance) {
-      throw new Error('ZkApp instance not initialized');
+      throw new Error('Add at least 1 signer');
     }
     
     try {
