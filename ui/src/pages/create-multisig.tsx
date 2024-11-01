@@ -9,21 +9,25 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { ContractDebugger } from './debug';
-import ZkappWorkerClient from './zkappWorkerClient';
+import { useZkapp } from './zkappContext';
+
 
 const ZKAPP_ADDRESS = 'B62qnsHGVW6dMndUfuHgjhimuPoS15hma2rhhJDrP3VxsE3hQjobeED';
 
 export default function CreateMultisig() {
-  const [zkappWorkerClient, setZkappWorkerClient] = useState<null | ZkappWorkerClient>(null);
-  const { account, isConnected, connectWallet } = useMinaWallet();
+
   const { 
-    isLoading, 
-    error: contractError, 
-    setupMultisig,
-    getContractState,
-    DEPLOYMENT_FEE,
-    TRANSACTION_FEE
-  } = usePopkornContract(ZKAPP_ADDRESS);
+    zkappWorkerClient,
+    hasWallet,
+    hasBeenSetup,
+    accountExists,
+    publicKey,
+    isLoading: isZkappLoading,
+    error: zkappError
+  } = useZkapp();
+
+
+  const { account, isConnected, connectWallet } = useMinaWallet();
 
   const [signersMapRoot, setSignersMapRoot] = useState('');
   const [signersCount, setSignersCount] = useState('');
@@ -42,44 +46,60 @@ export default function CreateMultisig() {
         const { MerkleMap } = await import('o1js');
         setO1jsLoaded(true);
 
-        if (isConnected) {
-          const state = await getContractState();
-          setIsInitialized(state.isInitialized.toBoolean());
+        if (hasWallet && hasBeenSetup && zkappWorkerClient) {
+          setStatus('Initializing contract...');
+          
+          // Fetch the account first
+          await zkappWorkerClient.fetchAccount(ZKAPP_ADDRESS);
+          
+          // Then initialize the zkApp instance
+          await zkappWorkerClient.initZkappInstance(ZKAPP_ADDRESS);
+          
+          // Finally get the contract state
+          const state = await zkappWorkerClient.getContractState();
+          console.log(state);
+          console.log(state.isInitialized);
+          
+          setIsInitialized(true); // todo: fix this
+          
+          setStatus('');
         }
       } catch (err) {
         console.error('Initialization error:', err);
+        setError(err instanceof Error ? err.message : 'Failed to initialize contract');
+        setStatus('');
       }
     })();
-  }, [isConnected, getContractState]);
+  }, [hasWallet, hasBeenSetup, zkappWorkerClient]);
 
   // Handle wallet connection status
   useEffect(() => {
-    if (isConnected) {
+    if (hasWallet && hasBeenSetup) {
       setStatus('');
       setError(null);
     } else {
       setStatus('Please connect your wallet to continue.');
     }
-  }, [isConnected]);
+  }, [hasWallet, hasBeenSetup]);
 
-  // Handle contract errors
-  useEffect(() => {
-    if (contractError) {
-      setError(contractError);
-      setStatus('');
-    }
-  }, [contractError]);
+  // // Handle contract errors
+  // useEffect(() => {
+  //   if (contractError) {
+  //     setError(contractError);
+  //     setStatus('');
+  //   }
+  // }, [contractError]);
 
   const handleSetupMultisig = useCallback(async () => {
-    if (!isConnected) {
+    if (!hasWallet || !hasBeenSetup) {
       setError('Please connect your wallet');
       return;
     }
 
-    if (isInitialized) {
-      setError('Contract is already initialized');
-      return;
-    }
+    // if (isInitialized) {
+    //   setError('Contract is already initialized');
+    //   return;
+    // }
 
     try {
       setError(null);
@@ -100,29 +120,23 @@ export default function CreateMultisig() {
       if (thresholdNum <= 0) {
         throw new Error('Threshold must be greater than 0');
       }
-
       setSetupStep(2);
       setStatus('Setting up multisig...');
 
-      console.log('Setup params:', {
-        root: signersMapRoot,
-        count: signersCount,
-        threshold: threshold
-      });
-
-      const hash = await setupMultisig(
+      const txJSON = await zkappWorkerClient!.setupMultisig(
         Field(signersMapRoot),
         UInt64.from(signersCount),
         UInt64.from(threshold)
       );
 
-      setTxHash(hash);
+      // Handle transaction submission here
+      setTxHash(txJSON); // Update to use the transaction JSON
       setSetupStep(3);
-      setStatus(`Multisig setup successful! Transaction hash: ${hash}`);
+      setStatus(`Multisig setup successful! Transaction hash: ${txJSON}`);
 
       // Refresh contract state
-      const newState = await getContractState();
-      setIsInitialized(newState.isInitialized.toBoolean());
+      const newState = await zkappWorkerClient!.getContractState();
+      setIsInitialized(true); // todo: fix this
 
     } catch (err) {
       console.error('Setup error:', err);
@@ -131,7 +145,8 @@ export default function CreateMultisig() {
       setStatus('');
       setSetupStep(0);
     }
-  }, [isConnected, isInitialized, signersMapRoot, signersCount, threshold, setupMultisig, getContractState]);
+  }, [hasWallet, hasBeenSetup, zkappWorkerClient, isInitialized, signersMapRoot, signersCount, threshold]);
+
 
   const handleThresholdChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -152,15 +167,26 @@ export default function CreateMultisig() {
     );
   }
 
-  if (isInitialized) {
+  if (!o1jsLoaded || isZkappLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasWallet || !hasBeenSetup) {
     return (
       <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <Card>
           <CardContent className="p-6">
             <Alert>
-              <AlertTitle>Contract Already Initialized</AlertTitle>
+              <AlertTitle>Wallet Not Connected</AlertTitle>
               <AlertDescription>
-                This multisig wallet has already been set up.
+                Please install and connect your Mina wallet to continue.
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -176,7 +202,7 @@ export default function CreateMultisig() {
           <CardHeader>
             <CardTitle>Create Multisig Wallet</CardTitle>
             <CardDescription>
-              Setup cost: {DEPLOYMENT_FEE + TRANSACTION_FEE} MINA ({DEPLOYMENT_FEE} MINA for deployment + {TRANSACTION_FEE} MINA fee)
+              {/* Setup cost: {DEPLOYMENT_FEE + TRANSACTION_FEE} MINA ({DEPLOYMENT_FEE} MINA for deployment + {TRANSACTION_FEE} MINA fee) */}
             </CardDescription>
           </CardHeader>
 
@@ -230,7 +256,7 @@ export default function CreateMultisig() {
                         value={threshold}
                         onChange={handleThresholdChange}
                         className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 mt-2"
-                        disabled={isLoading}
+                        disabled={isZkappLoading}
                       />
                     </div>
 
@@ -238,9 +264,9 @@ export default function CreateMultisig() {
                       onClick={handleSetupMultisig} 
                       className="w-full"
                       size="lg"
-                      disabled={isLoading || !signersMapRoot || !signersCount || parseInt(threshold) > parseInt(signersCount)}
+                      disabled={isZkappLoading || !signersMapRoot || !signersCount || parseInt(threshold) > parseInt(signersCount)}
                     >
-                      {isLoading ? 'Setting up...' : 'Create Multisig'}
+                      {isZkappLoading ? 'Setting up...' : 'Create Multisig'}
                     </Button>
                   </div>
                 </div>
