@@ -95,7 +95,7 @@ export const api = {
       console.log('transaction done');
 
       return {
-        // result: result,
+        result: transaction,
         isSuccess: true
       };
     } catch (error) {

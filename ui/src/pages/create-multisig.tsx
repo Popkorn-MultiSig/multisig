@@ -130,7 +130,7 @@ export default function CreateMultisig() {
       );
       
       // Handle transaction submission here
-      setTxHash(txJSON.result.hash); // Update to use the transaction JSON
+      // setTxHash(txJSON.result.hash); // todo
       setSetupStep(3);
       setStatus(`Multisig setup successful! Transaction hash: ${txJSON}`);
 
